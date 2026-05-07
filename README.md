@@ -101,15 +101,18 @@ Jenkins · Git · GitHub · Docker · Kubernetes · Helm · Terraform · Ansible
 
 ---
 
-## Contributing
+## Show Your Support
 
-Contributions welcome. See the quality checklist in [CLAUDE.md](./CLAUDE.md) — every addition must include working code, an architecture diagram, a troubleshooting section, and security notes. No toy examples.
+If this repository helps you learn Jenkins or level up your DevOps skills, please consider:
 
----
+- **Star this repo** — it helps others discover it and keeps me motivated to add more content
+- **Fork it** — make it your own learning sandbox or build on top of it
+- **Share it** — send it to a colleague, post it in your team's Slack, or mention it in a blog post
 
-## Support
+Every star and fork genuinely makes a difference. Thank you.
 
-If this repository helps you, star it and share it. Open an issue if you find errors or gaps.
+[![GitHub stars](https://img.shields.io/github/stars/cloud-prakhar/ultimate-jenkins-devops?style=social)](https://github.com/cloud-prakhar/ultimate-jenkins-devops/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/cloud-prakhar/ultimate-jenkins-devops?style=social)](https://github.com/cloud-prakhar/ultimate-jenkins-devops/network/members)
 
 ---
 
