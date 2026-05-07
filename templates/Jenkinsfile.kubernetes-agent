@@ -1,0 +1,192 @@
+/**
+ * Kubernetes Agent Pipeline Template
+ *
+ * Use this template when running Jenkins on Kubernetes.
+ * Each build gets a fresh ephemeral pod with multiple containers.
+ */
+
+pipeline {
+    agent {
+        kubernetes {
+            label 'jenkins-agent'
+            defaultContainer 'build'
+            yaml '''
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app: jenkins-agent
+spec:
+  serviceAccountName: jenkins
+  containers:
+  - name: jnlp
+    image: jenkins/inbound-agent:latest-jdk21
+    resources:
+      requests:
+        cpu: 100m
+        memory: 256Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+  # Primary build container — replace with your build image
+  - name: build
+    image: maven:3.9-eclipse-temurin-21    # Or node:20, python:3.12, etc.
+    command: ["sleep", "infinity"]
+    tty: true
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2000m
+        memory: 4Gi
+    volumeMounts:
+    - name: build-cache
+      mountPath: /root/.m2                 # Maven cache; adjust for other tools
+
+  # Kaniko for rootless Docker builds
+  - name: kaniko
+    image: gcr.io/kaniko-project/executor:debug
+    command: ["/busybox/sh", "-c", "cat"]
+    tty: true
+    volumeMounts:
+    - name: registry-credentials
+      mountPath: /kaniko/.docker/
+
+  # Helm for Kubernetes deployments
+  - name: helm
+    image: alpine/helm:3.14.0
+    command: ["sleep", "infinity"]
+    tty: true
+
+  # kubectl for Kubernetes operations
+  - name: kubectl
+    image: bitnami/kubectl:1.29
+    command: ["sleep", "infinity"]
+    tty: true
+
+  volumes:
+  - name: build-cache
+    persistentVolumeClaim:
+      claimName: build-cache   # Pre-create this PVC
+
+  - name: registry-credentials
+    secret:
+      secretName: registry-credentials
+      items:
+      - key: .dockerconfigjson
+        path: config.json
+
+  nodeSelector:
+    node-role: build   # Target dedicated build nodes
+
+  tolerations:
+  - key: dedicated
+    operator: Equal
+    value: jenkins
+    effect: NoSchedule
+'''
+        }
+    }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 45, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        APP_NAME  = '<YOUR_APP_NAME>'
+        REGISTRY  = '<YOUR_REGISTRY>'
+        IMAGE_TAG = "${BUILD_NUMBER}-${GIT_COMMIT.take(7)}"
+        IMAGE_URI = "${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                container('build') {
+                    checkout scm
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                container('build') {
+                    // Replace with your build command
+                    sh 'mvn clean package -DskipTests -B --no-transfer-progress'
+                }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                container('build') {
+                    sh 'mvn test -B --no-transfer-progress'
+                }
+            }
+            post {
+                always {
+                    junit 'target/surefire-reports/*.xml'
+                }
+            }
+        }
+
+        stage('Build Image') {
+            steps {
+                container('kaniko') {
+                    sh """
+                        /kaniko/executor \
+                          --context=${WORKSPACE} \
+                          --dockerfile=${WORKSPACE}/Dockerfile \
+                          --destination=${IMAGE_URI} \
+                          --destination=${REGISTRY}/${APP_NAME}:latest \
+                          --cache=true \
+                          --cache-repo=${REGISTRY}/cache
+                    """
+                }
+            }
+        }
+
+        stage('Deploy Dev') {
+            when { branch 'develop' }
+            steps {
+                container('helm') {
+                    withCredentials([file(credentialsId: 'kubeconfig-dev', variable: 'KUBECONFIG')]) {
+                        sh """
+                            helm upgrade --install ${APP_NAME} ./helm/${APP_NAME} \
+                              --namespace dev \
+                              --set image.tag=${IMAGE_TAG} \
+                              --atomic --wait --timeout 10m
+                        """
+                    }
+                }
+            }
+        }
+
+        stage('Deploy Production') {
+            when { branch 'main' }
+            steps {
+                input 'Deploy to production?'
+                container('helm') {
+                    withCredentials([file(credentialsId: 'kubeconfig-production', variable: 'KUBECONFIG')]) {
+                        sh """
+                            helm upgrade --install ${APP_NAME} ./helm/${APP_NAME} \
+                              --namespace production \
+                              --set image.tag=${IMAGE_TAG} \
+                              --atomic --wait --timeout 15m
+                        """
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always { cleanWs() }
+    }
+}

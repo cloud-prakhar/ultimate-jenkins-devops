@@ -1,0 +1,279 @@
+/**
+ * Declarative Pipeline Base Template
+ *
+ * Usage: Copy this file to your repository as 'Jenkinsfile'
+ * and customize each section for your application.
+ *
+ * Replace all <PLACEHOLDER> values with your actual values.
+ */
+
+// Optional: Load shared library
+// @Library('jenkins-shared-library@v1.0') _
+
+pipeline {
+
+    // ─── AGENT ──────────────────────────────────────────────────────────────
+    // Choose ONE of the following agent configurations:
+
+    // Option A: Any available agent (development/testing only)
+    // agent any
+
+    // Option B: Specific labeled agent
+    agent { label 'linux && docker' }
+
+    // Option C: Docker agent
+    // agent {
+    //     docker {
+    //         image 'maven:3.9-eclipse-temurin-21'
+    //         args '-v /data/m2-cache:/root/.m2'
+    //     }
+    // }
+
+    // Option D: Kubernetes agent (production)
+    // agent {
+    //     kubernetes {
+    //         defaultContainer 'app'
+    //         yaml '''
+    // spec:
+    //   containers:
+    //   - name: app
+    //     image: <YOUR_BUILD_IMAGE>
+    //     command: ["sleep", "infinity"]
+    // '''
+    //     }
+    // }
+
+    // ─── OPTIONS ────────────────────────────────────────────────────────────
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 30, unit: 'MINUTES')           // Adjust as needed
+        buildDiscarder(logRotator(
+            numToKeepStr: '10',
+            daysToKeepStr: '30'
+        ))
+        disableConcurrentBuilds()
+        skipDefaultCheckout()                         // We do manual checkout below
+    }
+
+    // ─── PARAMETERS ─────────────────────────────────────────────────────────
+    parameters {
+        string(
+            name: 'BRANCH',
+            defaultValue: 'main',
+            description: 'Branch to build'
+        )
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'production'],
+            description: 'Target deployment environment'
+        )
+        booleanParam(
+            name: 'SKIP_TESTS',
+            defaultValue: false,
+            description: 'Skip tests (emergency only)'
+        )
+    }
+
+    // ─── ENVIRONMENT ────────────────────────────────────────────────────────
+    environment {
+        APP_NAME    = '<YOUR_APP_NAME>'
+        REGISTRY    = '<YOUR_REGISTRY>'
+        IMAGE_TAG   = "${BUILD_NUMBER}-${GIT_COMMIT.take(7)}"
+
+        // Credentials — must be configured in Jenkins Credentials Store
+        DOCKER_CREDS = credentials('<YOUR_REGISTRY_CREDENTIAL_ID>')
+        // SONAR_TOKEN = credentials('sonar-token')
+    }
+
+    // ─── STAGES ─────────────────────────────────────────────────────────────
+    stages {
+
+        stage('Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.BRANCH}"]],
+                    extensions: [
+                        [$class: 'CleanBeforeCheckout'],
+                        [$class: 'CloneOption', noTags: false, shallow: false]
+                    ],
+                    userRemoteConfigs: [[
+                        url: '<YOUR_REPO_URL>',
+                        credentialsId: '<YOUR_GIT_CREDENTIAL_ID>'
+                    ]]
+                ])
+                sh 'git log --oneline -5'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // Replace with your build command
+                sh '<YOUR_BUILD_COMMAND>'
+            }
+        }
+
+        stage('Test') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                // Replace with your test command
+                sh '<YOUR_TEST_COMMAND>'
+            }
+            post {
+                always {
+                    // Replace with your test report path
+                    junit '<YOUR_TEST_REPORT_PATH>'
+                }
+            }
+        }
+
+        stage('Code Quality') {
+            when {
+                expression { !params.SKIP_TESTS }
+            }
+            steps {
+                // Uncomment and configure if using SonarQube
+                // withSonarQubeEnv('sonarqube') {
+                //     sh '<YOUR_SONAR_COMMAND>'
+                // }
+                // timeout(time: 5, unit: 'MINUTES') {
+                //     waitForQualityGate abortPipeline: true
+                // }
+                echo 'Code quality check placeholder'
+            }
+        }
+
+        stage('Package') {
+            steps {
+                // Replace with your package command
+                sh '<YOUR_PACKAGE_COMMAND>'
+                archiveArtifacts artifacts: '<YOUR_ARTIFACT_PATTERN>', fingerprint: true
+            }
+        }
+
+        stage('Docker Build') {
+            when {
+                anyOf { branch 'main'; branch 'develop' }
+            }
+            steps {
+                sh """
+                    docker build \
+                      --tag ${REGISTRY}/${APP_NAME}:${IMAGE_TAG} \
+                      --tag ${REGISTRY}/${APP_NAME}:latest \
+                      .
+                """
+            }
+        }
+
+        stage('Security Scan') {
+            when {
+                anyOf { branch 'main'; branch 'develop' }
+            }
+            steps {
+                sh """
+                    trivy image \
+                      --exit-code 1 \
+                      --severity HIGH,CRITICAL \
+                      ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                """
+            }
+        }
+
+        stage('Push Image') {
+            when {
+                anyOf { branch 'main'; branch 'develop' }
+            }
+            steps {
+                sh """
+                    echo "${DOCKER_CREDS_PSW}" | docker login ${REGISTRY} \
+                      -u "${DOCKER_CREDS_USR}" --password-stdin
+                    docker push ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                    docker push ${REGISTRY}/${APP_NAME}:latest
+                """
+            }
+        }
+
+        stage('Deploy Dev') {
+            when {
+                anyOf {
+                    branch 'develop'
+                    expression { params.ENVIRONMENT == 'dev' }
+                }
+            }
+            steps {
+                // Replace with your dev deployment command
+                sh './scripts/deploy.sh dev ${IMAGE_TAG}'
+            }
+        }
+
+        stage('Deploy Staging') {
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { params.ENVIRONMENT == 'staging' }
+                }
+            }
+            steps {
+                // Replace with your staging deployment command
+                sh './scripts/deploy.sh staging ${IMAGE_TAG}'
+            }
+        }
+
+        stage('Production Approval') {
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { params.ENVIRONMENT == 'production' }
+                }
+            }
+            steps {
+                timeout(time: 24, unit: 'HOURS') {
+                    input(
+                        message: "Deploy ${APP_NAME}:${IMAGE_TAG} to PRODUCTION?",
+                        ok: 'Deploy',
+                        submitter: 'release-managers'   // Adjust to your group
+                    )
+                }
+            }
+        }
+
+        stage('Deploy Production') {
+            when {
+                anyOf {
+                    branch 'main'
+                    expression { params.ENVIRONMENT == 'production' }
+                }
+            }
+            steps {
+                // Replace with your production deployment command
+                sh './scripts/deploy.sh production ${IMAGE_TAG}'
+            }
+        }
+    }
+
+    // ─── POST ────────────────────────────────────────────────────────────────
+    post {
+        always {
+            // Clean up Docker images
+            sh """
+                docker rmi ${REGISTRY}/${APP_NAME}:${IMAGE_TAG} 2>/dev/null || true
+                docker rmi ${REGISTRY}/${APP_NAME}:latest 2>/dev/null || true
+            """
+            cleanWs()
+        }
+        success {
+            // Uncomment and configure your notification
+            // slackSend color: 'good',
+            //           message: "✅ ${APP_NAME} #${BUILD_NUMBER} deployed to ${params.ENVIRONMENT}"
+            echo "✅ Build ${BUILD_NUMBER} succeeded"
+        }
+        failure {
+            // slackSend color: 'danger',
+            //           message: "❌ ${APP_NAME} #${BUILD_NUMBER} FAILED - ${BUILD_URL}"
+            echo "❌ Build ${BUILD_NUMBER} failed"
+        }
+    }
+}
