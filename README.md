@@ -37,6 +37,10 @@ flowchart LR
     K --> PROD[Production Jenkins\n11]
     PROD --> SEC[Security\n12]
     SEC --> MON[Monitoring\n13]
+    MON --> TS[Troubleshooting\n14]
+    TS --> RWP[Real-World Projects\n15]
+    RWP --> IQ[Interview Prep\n16]
+    IQ --> REF[References\n17]
 ```
 
 ---
@@ -48,7 +52,7 @@ flowchart LR
 | 00 | [Local Lab Setup](./00-local-lab-setup/) | Beginner | **Free** | Jenkins + Gitea + local Registry in Docker |
 | 01 | [Fundamentals](./01-fundamentals/) | Beginner | Free | Jenkins architecture, CI/CD concepts, how it works |
 | 02 | [Installation](./02-installation/) | Beginner | Free | Docker, bare metal, Kubernetes Helm installs |
-| 03 | [Jenkins UI](./03-jenkins-ui/) | Beginner | Dashboards, plugins, system configuration |
+| 03 | [Jenkins UI](./03-jenkins-ui/) | Beginner | Free | Dashboards, plugins, system configuration |
 | 04 | [Freestyle Jobs](./04-freestyle-jobs/) | Beginner | Free | Build triggers, SCM integration, build steps |
 | 05 | [Pipelines](./05-pipelines/) | Beginner–Intermediate | Free | Pipeline concepts, stages, agents, post actions |
 | 06 | [Declarative Pipelines](./06-declarative-pipelines/) | Intermediate | Free | Full declarative syntax, parameters, when conditions |

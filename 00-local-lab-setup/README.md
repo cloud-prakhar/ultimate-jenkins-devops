@@ -409,7 +409,7 @@ sudo usermod -aG docker $USER
 
 This means Gitea cannot reach Jenkins. Check:
 
-1. Both containers are on the same network: `docker network inspect ultimate-jenkins-devops_lab-network`
+1. Both containers are on the same network: `docker network inspect 00-local-lab-setup_lab-network`
 2. The webhook URL uses `jenkins:8080` (not `localhost:8080`)
 3. The `gitea` plugin is installed in Jenkins (check Manage Jenkins → Plugins → Installed)
 
@@ -434,7 +434,7 @@ docker compose down -v
 
 # Remove the built Jenkins image (to force a full rebuild)
 docker compose down
-docker rmi ultimate-jenkins-devops_jenkins
+docker rmi 00-local-lab-setup-jenkins
 docker compose up -d --build
 ```
 
