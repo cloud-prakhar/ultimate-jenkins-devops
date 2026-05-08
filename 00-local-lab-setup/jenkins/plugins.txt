@@ -1,0 +1,35 @@
+# Jenkins Plugins — Local Learning Lab
+# Used by jenkins-plugin-cli during image build.
+# Pin versions in production; latest is acceptable here for learning.
+
+# ── Core Pipeline ─────────────────────────────────────────────────────────
+workflow-aggregator:latest
+pipeline-stage-view:latest
+pipeline-graph-analysis:latest
+
+# ── Source Control ─────────────────────────────────────────────────────────
+git:latest
+gitea:latest
+github:latest
+
+# ── Docker ─────────────────────────────────────────────────────────────────
+docker-workflow:latest
+docker-commons:latest
+
+# ── UI & Reporting ─────────────────────────────────────────────────────────
+blueocean:latest
+ansicolor:latest
+timestamper:latest
+htmlpublisher:latest
+junit:latest
+
+# ── Build Utilities ────────────────────────────────────────────────────────
+ws-cleanup:latest
+build-timeout:latest
+credentials-binding:latest
+
+# ── Configuration as Code ──────────────────────────────────────────────────
+configuration-as-code:latest
+
+# ── Job DSL (create jobs as code) ─────────────────────────────────────────
+job-dsl:latest

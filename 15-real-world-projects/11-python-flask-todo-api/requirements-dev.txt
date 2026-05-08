@@ -1,0 +1,8 @@
+# Development and CI dependencies — NOT installed in the production Docker image.
+# The pipeline installs both requirements.txt and requirements-dev.txt.
+# The production Docker image installs only requirements.txt.
+pytest==8.2.0
+pytest-cov==5.0.0
+flake8==7.0.0
+black==24.4.2
+bandit==1.7.9

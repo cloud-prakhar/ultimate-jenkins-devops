@@ -1,0 +1,359 @@
+// ── Flask Todo API — Jenkins CI/CD Pipeline ──────────────────────────────────
+//
+// This pipeline runs on every push to the repository.
+// It does exactly what a human reviewer does — but automatically, every time,
+// without forgetting a step.
+//
+// What you will see in the Jenkins Stage View:
+//
+//   [Checkout] → [Install] → [Lint] → [Format] → [Security] → [Tests]
+//                                                               ↓ (only on main/develop)
+//                                                          [Docker Build]
+//                                                               ↓
+//                                                          [Push Image]
+//
+// The key rule: if ANY stage fails, no subsequent stage runs.
+// Broken code NEVER makes it to a Docker image.
+
+pipeline {
+
+    // ── agent none ────────────────────────────────────────────────────────────
+    // We declare no global agent here. Each stage group below specifies the
+    // exact Docker image it needs. This means:
+    //   - No Python installed on the Jenkins host needed
+    //   - No Docker installed in the Python container needed
+    //   - Each stage runs in a clean, purpose-built environment
+    // This mirrors how large teams build: specialists, not generalists.
+    agent none
+
+    options {
+        timestamps()                                         // Show timestamps in every log line
+        ansiColor('xterm')                                   // Colored output for readability
+        timeout(time: 20, unit: 'MINUTES')                   // Kill stuck builds automatically
+        buildDiscarder(logRotator(numToKeepStr: '10'))        // Keep disk usage bounded
+        disableConcurrentBuilds()                            // One build at a time for this job
+    }
+
+    environment {
+        APP_NAME = 'flask-todo-api'
+        REGISTRY = 'localhost:5000'
+        // BUILD_NUMBER is provided by Jenkins automatically (1, 2, 3, ...)
+        // It uniquely identifies every build, so every image has a unique tag.
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+
+        // ── STAGE GROUP 1: Code Quality & Tests ───────────────────────────────
+        // All quality checks and tests run inside a Python 3.12 container.
+        // Jenkins pulls this image from Docker Hub automatically — you do not
+        // need Python installed anywhere on your machine or the Jenkins host.
+        stage('Code Quality & Tests') {
+
+            agent {
+                docker {
+                    image 'python:3.12-slim'
+                    label 'linux'
+                    // Cache pip downloads between builds to speed up installs.
+                    // Without this, every build downloads all packages from PyPI.
+                    args '-v /tmp/pip-cache:/root/.cache/pip'
+                }
+            }
+
+            stages {
+
+                // ── Checkout ─────────────────────────────────────────────────
+                // Pull the source code from Gitea. This is always the first step.
+                // Without it, the pipeline has no code to work with.
+                stage('Checkout') {
+                    steps {
+                        checkout scm
+                        // Print environment info — useful for debugging when builds fail
+                        sh '''
+                            echo "Python: $(python --version)"
+                            echo "Pip: $(pip --version)"
+                            echo "Branch: ${GIT_BRANCH}"
+                            echo "Commit: ${GIT_COMMIT}"
+                            echo "Build:  #${BUILD_NUMBER}"
+                        '''
+                    }
+                }
+
+                // ── Install Dependencies ──────────────────────────────────────
+                // Install BOTH runtime and dev dependencies.
+                // The production Docker image will only install runtime deps —
+                // this is shown in the Dockerfile's multi-stage build.
+                stage('Install Dependencies') {
+                    steps {
+                        sh '''
+                            pip install --upgrade pip --quiet
+                            pip install -r requirements.txt -r requirements-dev.txt --quiet
+                            echo "Installed packages:"
+                            pip list --format=columns
+                        '''
+                    }
+                }
+
+                // ── Lint ──────────────────────────────────────────────────────
+                // flake8 checks for Python style violations and obvious errors.
+                //
+                // WHY this stage exists:
+                //   Style inconsistency costs teams hours of code review time.
+                //   flake8 catches: undefined variables, unused imports, lines that
+                //   are too long, and dozens of other common mistakes — instantly.
+                //
+                // If this fails: fix the reported lines before pushing again.
+                stage('Lint') {
+                    steps {
+                        sh '''
+                            echo "Running flake8..."
+                            flake8 app/ tests/
+                            echo "Lint passed — no style violations found."
+                        '''
+                    }
+                }
+
+                // ── Format Check ──────────────────────────────────────────────
+                // Black checks that code is consistently formatted.
+                // `--check` mode does NOT modify files — it exits with error if
+                // any file would change. This is the right mode for CI.
+                //
+                // WHY this stage exists:
+                //   Debates about code formatting waste time. Black eliminates
+                //   the debate by being opinionated. Everyone's code looks the same.
+                //
+                // If this fails: run `black app/ tests/` locally, then push again.
+                stage('Format Check') {
+                    steps {
+                        sh '''
+                            echo "Checking code format with black..."
+                            black --check app/ tests/
+                            echo "Format check passed."
+                        '''
+                    }
+                }
+
+                // ── Security Scan ─────────────────────────────────────────────
+                // Bandit scans Python code for common security vulnerabilities:
+                //   - Hardcoded passwords
+                //   - Use of weak cryptography
+                //   - SQL injection risks
+                //   - Unsafe use of subprocess, eval, pickle, etc.
+                //
+                // WHY this stage exists:
+                //   Security bugs found in code review are cheap to fix.
+                //   Security bugs found in production are expensive and damaging.
+                //   This is "shift left" security — catching issues as early as possible.
+                //
+                // The `|| true` means: always show the report but never fail
+                // the build on low/medium issues. In production you would set
+                // --exit-zero removal and --severity-level to HIGH to fail builds.
+                // See the "Extending the Pipeline" section in the README.
+                stage('Security Scan') {
+                    steps {
+                        sh '''
+                            echo "Running bandit security scan..."
+                            bandit -r app/ \
+                                --severity-level medium \
+                                -f txt \
+                                -o bandit-report.txt \
+                            || true
+                            echo "=== Security Scan Report ==="
+                            cat bandit-report.txt
+                        '''
+                    }
+                    post {
+                        always {
+                            // Archive the report so you can read it in the Jenkins UI
+                            // under Build → Artifacts, even after the workspace is cleaned.
+                            archiveArtifacts artifacts: 'bandit-report.txt',
+                                             allowEmptyArchive: true
+                        }
+                    }
+                }
+
+                // ── Unit Tests ────────────────────────────────────────────────
+                // pytest runs all tests in the tests/ directory.
+                // --cov-fail-under=80 means: if test coverage drops below 80%,
+                // the build FAILS. This enforces that new code has tests.
+                //
+                // WHY this stage exists:
+                //   Tests are the contract between what the code promises to do
+                //   and what it actually does. Jenkins enforces this contract on
+                //   every push. No test coverage = no confidence = no deployment.
+                //
+                // If this fails: look at the JUnit test report in Jenkins UI
+                //   (the "Test Results" link on the build page).
+                stage('Unit Tests') {
+                    steps {
+                        sh '''
+                            mkdir -p test-results
+                            pytest tests/ \
+                                --junitxml=test-results/junit.xml \
+                                --cov=app \
+                                --cov-report=xml:coverage.xml \
+                                --cov-report=term-missing \
+                                --cov-fail-under=80 \
+                                -v
+                        '''
+                    }
+                    post {
+                        always {
+                            // JUnit plugin parses this XML and shows test results
+                            // in the Jenkins UI with pass/fail history per test.
+                            // You can see exactly WHICH tests failed and WHEN they started failing.
+                            junit 'test-results/junit.xml'
+                        }
+                    }
+                }
+
+            } // end: nested stages inside 'Code Quality & Tests'
+
+            post {
+                success {
+                    // All quality checks and tests passed.
+                    // Stash the workspace so the Docker stage can access it.
+                    // Stash is Jenkins's way of passing files between stages
+                    // that run on different agents or containers.
+                    stash name: 'build-source', includes: '**'
+                    echo "All quality gates passed for build #${BUILD_NUMBER}."
+                }
+                failure {
+                    echo "Quality gates failed. Fix the issues above and push again."
+                }
+            }
+
+        } // end: 'Code Quality & Tests'
+
+
+        // ── STAGE GROUP 2: Build & Push Docker Image ─────────────────────────
+        // This stage only runs when code lands on `main` or `develop`.
+        // Feature branches run quality checks (above) but do not produce images.
+        //
+        // WHY: You want images for every branch that might be deployed somewhere.
+        //   `main` → production image
+        //   `develop` → staging image
+        //   `feature/*` → tests only (no image needed for short-lived branches)
+        stage('Docker Build & Push') {
+
+            when {
+                // `beforeAgent true` means: evaluate this condition BEFORE
+                // allocating an agent. If the branch is not main or develop,
+                // Jenkins skips this stage WITHOUT spinning up a Docker container.
+                // This saves time and resources.
+                beforeAgent true
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+
+            // A different container for Docker operations — the Docker CLI image.
+            // It has `docker` available but not Python. That is intentional.
+            // The source code arrives via `unstash`, not via checkout.
+            agent {
+                docker {
+                    image 'docker:26-cli'
+                    label 'linux'
+                    // Mount the host Docker socket so this container can build images
+                    // and push to the local registry using the HOST Docker daemon.
+                    args '-v /var/run/docker.sock:/var/run/docker.sock'
+                }
+            }
+
+            stages {
+
+                stage('Docker Build') {
+                    steps {
+                        // Retrieve the source code stashed by the previous stage
+                        unstash 'build-source'
+
+                        sh """
+                            echo "Building image: ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+
+                            docker build \
+                                --tag ${REGISTRY}/${APP_NAME}:${IMAGE_TAG} \
+                                --tag ${REGISTRY}/${APP_NAME}:latest \
+                                --label "build.number=${BUILD_NUMBER}" \
+                                --label "build.branch=${GIT_BRANCH}" \
+                                --label "build.commit=${GIT_COMMIT}" \
+                                .
+
+                            echo "Build complete. Verifying image..."
+                            docker image inspect ${REGISTRY}/${APP_NAME}:${IMAGE_TAG} \
+                                --format 'Size: {{.Size}} bytes, Created: {{.Created}}'
+                        """
+                    }
+                }
+
+                stage('Push to Registry') {
+                    steps {
+                        sh """
+                            echo "Pushing to local registry at ${REGISTRY}..."
+                            docker push ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+                            docker push ${REGISTRY}/${APP_NAME}:latest
+                            echo "Push complete."
+                            echo "Pull this image with:"
+                            echo "  docker pull ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+                        """
+                    }
+                }
+
+            } // end: nested stages inside 'Docker Build & Push'
+
+            post {
+                success {
+                    echo "Image available at: ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+                }
+                failure {
+                    echo "Docker build or push failed. Is the registry running? Check: curl http://localhost:5000/v2/"
+                }
+                always {
+                    // Clean up local Docker images to prevent disk bloat on the build host.
+                    // The images are safely stored in the registry — we do not need local copies.
+                    sh """
+                        docker rmi ${REGISTRY}/${APP_NAME}:${IMAGE_TAG} 2>/dev/null || true
+                        docker rmi ${REGISTRY}/${APP_NAME}:latest 2>/dev/null || true
+                    """
+                }
+            }
+
+        } // end: 'Docker Build & Push'
+
+    } // end: stages
+
+    // ── Pipeline-level post actions ───────────────────────────────────────────
+    // These run regardless of which agent or stage was last active.
+    post {
+        always {
+            // cleanWs() deletes the Jenkins workspace directory for this build.
+            // Without this, old build files accumulate and fill up disk space.
+            // This is especially important with Docker agents that may run on
+            // shared infrastructure.
+            cleanWs()
+        }
+        success {
+            echo """
+Pipeline #${BUILD_NUMBER} succeeded.
+Image: ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+
+To run the application locally:
+  docker run -p 5000:5000 ${REGISTRY}/${APP_NAME}:${IMAGE_TAG}
+
+Then open: http://localhost:5000/health
+"""
+        }
+        failure {
+            echo """
+Pipeline #${BUILD_NUMBER} failed.
+Check the stage that failed above and look at the console output.
+
+Common causes:
+  - Lint/format: run 'flake8 app/ tests/' and 'black app/ tests/' locally first
+  - Tests: run 'pytest tests/ -v' locally and fix failing tests
+  - Docker: ensure the local registry is running (docker compose ps)
+"""
+        }
+    }
+
+}

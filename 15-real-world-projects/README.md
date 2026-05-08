@@ -2,24 +2,29 @@
 
 ## Overview
 
-This section contains complete, production-ready project implementations demonstrating Jenkins CI/CD across different technologies, deployment patterns, and complexity levels. Each project is self-contained with source code, Jenkinsfile, documentation, and deployment guides.
+This section contains complete project implementations demonstrating Jenkins CI/CD across different technologies, deployment patterns, and complexity levels. Each project is self-contained with source code, Jenkinsfile, documentation, and deployment guides.
+
+Projects marked **Free** require no cloud account, no paid services, and no credit card — only Docker and time.
 
 ---
 
 ## Projects Index
 
-| # | Project | Stack | Complexity | Pattern |
-|---|---------|-------|------------|---------|
-| 01 | [Java CI/CD Pipeline](#project-01) | Java, Maven, Docker, K8s | Intermediate | Standard CI/CD |
-| 02 | [Node.js Microservice Pipeline](#project-02) | Node.js, Docker, K8s | Intermediate | Microservices |
-| 03 | [Python ML Model Pipeline](#project-03) | Python, Docker | Advanced | ML deployment |
-| 04 | [Multi-Branch Pipeline](#project-04) | Any stack | Intermediate | GitFlow |
-| 05 | [Blue-Green Deployment](#project-05) | K8s, Helm | Advanced | Zero-downtime |
-| 06 | [Canary Deployment](#project-06) | K8s, Istio | Advanced | Progressive delivery |
-| 07 | [Infrastructure as Code Pipeline](#project-07) | Terraform, AWS | Advanced | IaC |
-| 08 | [Jenkins on Kubernetes HA](#project-08) | K8s, Helm | Expert | Platform |
-| 09 | [Backup Automation](#project-09) | Shell, AWS S3 | Beginner | Operations |
-| 10 | [Monitoring & Alerting Setup](#project-10) | Prometheus, Grafana | Advanced | Observability |
+| # | Project | Stack | Cost | Complexity | Pattern |
+|---|---------|-------|------|------------|---------|
+| 11 | [**Python Flask Todo API**](./11-python-flask-todo-api/README.md) | Python, Docker, Local Registry | **Free** | **Beginner** | First CI/CD pipeline |
+| 01 | [Java CI/CD Pipeline](#project-01) | Java, Maven, Docker, K8s | Cloud | Intermediate | Standard CI/CD |
+| 02 | [Node.js Microservice Pipeline](#project-02) | Node.js, Docker, K8s | Cloud | Intermediate | Microservices |
+| 03 | [Python ML Model Pipeline](#project-03) | Python, Docker | Cloud | Advanced | ML deployment |
+| 04 | [Multi-Branch Pipeline](#project-04) | Any stack | Cloud | Intermediate | GitFlow |
+| 05 | [Blue-Green Deployment](#project-05) | K8s, Helm | Cloud | Advanced | Zero-downtime |
+| 06 | [Canary Deployment](#project-06) | K8s, Istio | Cloud | Advanced | Progressive delivery |
+| 07 | [Infrastructure as Code Pipeline](#project-07) | Terraform, AWS | Cloud | Advanced | IaC |
+| 08 | [Jenkins on Kubernetes HA](#project-08) | K8s, Helm | Cloud | Expert | Platform |
+| 09 | [Backup Automation](#project-09) | Shell, AWS S3 | Cloud | Beginner | Operations |
+| 10 | [Monitoring & Alerting Setup](#project-10) | Prometheus, Grafana | Cloud | Advanced | Observability |
+
+> **Start here if you are new:** Project 11 requires only Docker and the [local lab setup](../00-local-lab-setup/README.md). Complete it before moving to the cloud-based projects.
 
 ---
 

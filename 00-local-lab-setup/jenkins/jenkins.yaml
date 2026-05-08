@@ -1,0 +1,75 @@
+# Jenkins Configuration as Code (JCasC)
+# This file configures Jenkins automatically on startup — no manual click-ops needed.
+# Environment variables (${VAR}) are substituted at runtime from docker-compose .env file.
+#
+# To reload config without restarting: Manage Jenkins → Configuration as Code → Reload
+
+jenkins:
+  systemMessage: |
+    ╔══════════════════════════════════════════════════════════════╗
+    ║          Jenkins Learning Lab — ultimate-jenkins-devops       ║
+    ║                                                               ║
+    ║  This instance is managed via Configuration as Code (JCasC). ║
+    ║  Do NOT configure via the UI — changes will be overwritten.  ║
+    ║  Source: 00-local-lab-setup/jenkins/jenkins.yaml             ║
+    ╚══════════════════════════════════════════════════════════════╝
+
+  # Never run builds on the controller — always use agents.
+  # Even in this local lab we follow production rules.
+  numExecutors: 0
+  mode: EXCLUSIVE
+
+  # Local user database — suitable for a local lab only.
+  # Production: use LDAP / Active Directory / SSO.
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "${JENKINS_ADMIN_ID}"
+          name: "Jenkins Admin"
+          password: "${JENKINS_ADMIN_PASSWORD}"
+
+  # All logged-in users have full access — simplified for local learning.
+  # Production: use Role-Based Authorization Strategy.
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  # Agent-to-Controller security — enabled even in the lab for correctness.
+  remotingSecurity:
+    enabled: true
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          # Credentials Jenkins uses to clone repos from Gitea.
+          - usernamePassword:
+              scope: GLOBAL
+              id: "gitea-credentials"
+              description: "Gitea admin — used for SCM checkout and webhook auth"
+              username: "${GITEA_ADMIN_USER}"
+              password: "${GITEA_ADMIN_PASSWORD}"
+
+          # Credentials for the local Docker registry (no auth by default,
+          # but kept here as a template for when you add auth later).
+          - usernamePassword:
+              scope: GLOBAL
+              id: "registry-credentials"
+              description: "Local Docker registry (localhost:5000)"
+              username: ""
+              password: ""
+
+unclassified:
+  location:
+    # Jenkins must know its own URL to generate correct webhook and build links.
+    url: "http://localhost:8080/"
+    adminAddress: "jenkins-admin@lab.local"
+
+  # Gitea plugin configuration — tells Jenkins where Gitea lives.
+  giteaServers:
+    servers:
+      - displayName: "Local Gitea"
+        serverUrl: "http://gitea:3000"
+        manageHooks: true
+        credentialsId: "gitea-credentials"

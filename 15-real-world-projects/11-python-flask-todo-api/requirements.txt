@@ -1,0 +1,3 @@
+# Runtime dependencies — installed in both the container and the CI pipeline
+flask==3.0.3
+gunicorn==22.0.0
