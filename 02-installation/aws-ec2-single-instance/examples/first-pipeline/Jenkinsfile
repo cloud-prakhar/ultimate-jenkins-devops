@@ -1,0 +1,13 @@
+pipeline {
+    agent any
+    stages {
+        stage('Verify') {
+            steps {
+                sh '''
+                    echo "Running on $(hostname)"
+                    java -version
+                '''
+            }
+        }
+    }
+}

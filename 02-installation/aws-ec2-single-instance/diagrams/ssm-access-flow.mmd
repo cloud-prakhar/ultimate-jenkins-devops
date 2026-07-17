@@ -1,0 +1,9 @@
+sequenceDiagram
+    participant User as Learner workstation
+    participant AWS as AWS CLI
+    participant SSM as Systems Manager
+    participant EC2 as EC2 instance
+    User->>AWS: aws ssm start-session
+    AWS->>SSM: request session
+    SSM->>EC2: open managed session
+    EC2-->>User: shell or port-forwarded Jenkins access

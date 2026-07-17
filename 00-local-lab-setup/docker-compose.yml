@@ -1,125 +1,111 @@
-# Local Jenkins Learning Lab
-# ─────────────────────────────────────────────────────────────────────────────
-# Three services work together to give you a complete, free CI/CD environment:
-#
-#   jenkins  → The automation server we are learning (port 8080)
-#   gitea    → A self-hosted GitHub replacement for local repos (port 3000)
-#   registry → A local Docker image registry (port 5000)
-#
-# How they connect:
-#   Developer pushes code to Gitea → Gitea notifies Jenkins via webhook
-#   → Jenkins runs the pipeline → Docker image is built and pushed to registry
-#
-# Usage:
-#   cp .env.example .env           # Set your passwords
-#   docker compose up -d           # Start the lab
-#   docker compose down            # Stop (data is preserved in volumes)
-#   docker compose down -v         # Stop AND delete all data (fresh start)
-
 services:
-
-  # ── Jenkins ──────────────────────────────────────────────────────────────
   jenkins:
     build:
       context: ./jenkins
-    container_name: jenkins
+    container_name: ${COMPOSE_PROJECT_NAME:-ultimate-jenkins-devops}-jenkins
     restart: unless-stopped
-
-    # ⚠️  LOCAL LAB ONLY: Running as root avoids Docker socket permission
-    #     issues across macOS, Windows, and Linux without extra configuration.
-    #     In production, always run Jenkins as a non-root dedicated user.
     user: root
-
     ports:
-      - "8080:8080"    # Web UI and REST API
-      - "50000:50000"  # Agent connection port (JNLP)
-
-    volumes:
-      # Jenkins home directory — stores jobs, builds, credentials, plugins
-      - jenkins-data:/var/jenkins_home
-
-      # Mounting the host Docker socket lets Jenkins run `docker build`
-      # and `docker push` commands against the HOST Docker daemon.
-      # The registry container is therefore reachable at localhost:5000.
-      - /var/run/docker.sock:/var/run/docker.sock
-
+      - "8080:8080"
+      - "50000:50000"
     environment:
-      # These variables are substituted into jenkins.yaml by the JCasC plugin
-      - JENKINS_ADMIN_ID=${JENKINS_ADMIN_ID}
-      - JENKINS_ADMIN_PASSWORD=${JENKINS_ADMIN_PASSWORD}
-      - GITEA_ADMIN_USER=${GITEA_ADMIN_USER}
-      - GITEA_ADMIN_PASSWORD=${GITEA_ADMIN_PASSWORD}
-
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD}
+      GITEA_ADMIN_USER: ${GITEA_ADMIN_USER}
+      GITEA_ADMIN_PASSWORD: ${GITEA_ADMIN_PASSWORD}
+      JENKINS_AGENT_NAME: ${JENKINS_AGENT_NAME}
+      JENKINS_AGENT_EXECUTORS: ${JENKINS_AGENT_EXECUTORS}
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/login >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 90s
     networks:
       - lab-network
 
-    depends_on:
-      - gitea
-      - registry
-
-  # ── Gitea (self-hosted Git server) ───────────────────────────────────────
-  gitea:
-    image: gitea/gitea:latest
-    container_name: gitea
+  agent:
+    build:
+      context: ./agent
+    container_name: ${COMPOSE_PROJECT_NAME:-ultimate-jenkins-devops}-agent
     restart: unless-stopped
+    environment:
+      JENKINS_URL: http://jenkins:8080
+      JENKINS_WEB_SOCKET: "true"
+      JENKINS_ADMIN_ID: ${JENKINS_ADMIN_ID}
+      JENKINS_ADMIN_PASSWORD: ${JENKINS_ADMIN_PASSWORD}
+      AGENT_NAME: ${JENKINS_AGENT_NAME}
+      AGENT_WORKDIR: /home/jenkins/agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - agent-workdir:/home/jenkins/agent
+    depends_on:
+      jenkins:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'agent.jar|remoting.jar' >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - lab-network
 
+  gitea:
+    image: gitea/gitea:1.22.6
+    container_name: ${COMPOSE_PROJECT_NAME:-ultimate-jenkins-devops}-gitea
+    restart: unless-stopped
     ports:
-      - "3000:3000"   # Gitea web interface and HTTP Git
-      - "2222:22"     # SSH Git operations (maps to host port 2222)
-
+      - "3000:3000"
+      - "2222:22"
+    environment:
+      USER_UID: "1000"
+      USER_GID: "1000"
+      GITEA__server__ROOT_URL: http://localhost:3000/
+      GITEA__server__DOMAIN: localhost
+      GITEA__server__SSH_DOMAIN: localhost
+      GITEA__server__SSH_PORT: 2222
+      GITEA__server__HTTP_PORT: 3000
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__service__DISABLE_REGISTRATION: "true"
+      GITEA__webhook__ALLOWED_HOST_LIST: "*"
     volumes:
       - gitea-data:/data
-
-    environment:
-      # Tell Gitea where it lives so links and webhooks work correctly
-      - GITEA__server__HTTP_PORT=3000
-      - GITEA__server__DOMAIN=localhost
-      - GITEA__server__ROOT_URL=http://localhost:3000
-      - GITEA__server__SSH_DOMAIN=localhost
-      - GITEA__server__SSH_PORT=2222
-
-      # Use SQLite — no separate database container needed for a local lab
-      - GITEA__database__DB_TYPE=sqlite3
-
-      # Disable the install wizard on first boot
-      - GITEA__security__INSTALL_LOCK=true
-
-      # Allow webhooks to reach Jenkins on the same Docker network.
-      # Without this, Gitea blocks outbound HTTP to internal addresses.
-      - GITEA__webhook__ALLOWED_HOST_LIST=*
-
-      # Gitea admin account
-      - GITEA__admin__DEFAULT_ORG_VISIBILITY=public
-
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
     networks:
       - lab-network
 
-  # ── Local Docker Registry ────────────────────────────────────────────────
   registry:
-    image: registry:2
-    container_name: registry
+    image: registry:2.8.3
+    container_name: ${COMPOSE_PROJECT_NAME:-ultimate-jenkins-devops}-registry
     restart: unless-stopped
-
     ports:
-      - "5000:5000"   # Registry API
-
+      - "5000:5000"
     volumes:
-      # Store images on disk so they survive container restarts
       - registry-data:/var/lib/registry
-
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/v2/ >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
     networks:
       - lab-network
 
-# ── Volumes ──────────────────────────────────────────────────────────────────
 volumes:
   jenkins-data:
-    driver: local
   gitea-data:
-    driver: local
   registry-data:
-    driver: local
+  agent-workdir:
 
-# ── Networks ──────────────────────────────────────────────────────────────────
 networks:
   lab-network:
     driver: bridge

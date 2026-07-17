@@ -1,0 +1,50 @@
+pipeline {
+    agent {
+        docker {
+            image 'python:3.12-slim'
+            label 'linux'
+            args '-v /tmp/pip-cache:/root/.cache/pip'
+        }
+    }
+
+    options {
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '5'))
+        disableConcurrentBuilds()
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                    pip install --upgrade pip
+                    pip install -r requirements.txt -r requirements-dev.txt
+                '''
+            }
+        }
+        stage('Tests') {
+            steps {
+                sh 'pytest tests -q'
+            }
+        }
+        stage('Docker Build') {
+            agent { label 'linux' }
+            steps {
+                sh 'docker build -t flask-todo-api:beginner .'
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker rmi flask-todo-api:beginner >/dev/null 2>&1 || true'
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

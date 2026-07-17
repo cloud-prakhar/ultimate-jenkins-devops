@@ -1,0 +1,10 @@
+flowchart TD
+    USER[Developer laptop]
+    USER --> JEN[Jenkins controller]
+    USER --> GIT[Gitea]
+    JEN --> AGENT[Local linux agent]
+    AGENT --> REG[Local Docker registry]
+    AGENT --> GIT
+    JEN --- JHOME[(jenkins-data)]
+    GIT --- GHOME[(gitea-data)]
+    REG --- RHOME[(registry-data)]

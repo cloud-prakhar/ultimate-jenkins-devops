@@ -1,6 +1,6 @@
 # AI Instruction & Memory Files (local-only, never commit)
-CLAUDE.md
 MEMORY.md
+memory.md
 
 # OS Files
 .DS_Store

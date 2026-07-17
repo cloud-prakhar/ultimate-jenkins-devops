@@ -1,0 +1,97 @@
+pipeline {
+    agent none
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '14'))
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        APP_NAME     = 'flask-todo-api'
+        REGISTRY     = 'localhost:5000'
+        IMAGE_TAG    = "${BUILD_NUMBER}"
+        FULL_IMAGE   = "${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checks and Tests') {
+            agent {
+                docker {
+                    image 'python:3.12-slim'
+                    label 'linux'
+                    args '-v /tmp/pip-cache:/root/.cache/pip'
+                }
+            }
+            stages {
+                stage('Checkout') {
+                    steps {
+                        checkout scm
+                    }
+                }
+                stage('Install') {
+                    steps {
+                        sh 'pip install -r requirements.txt -r requirements-dev.txt'
+                    }
+                }
+                stage('Lint') {
+                    steps {
+                        sh 'flake8 app tests'
+                    }
+                }
+                stage('Format') {
+                    steps {
+                        sh 'black --check app tests'
+                    }
+                }
+                stage('Test') {
+                    steps {
+                        sh '''
+                            mkdir -p test-results
+                            pytest tests --junitxml=test-results/junit.xml --cov=app --cov-fail-under=80
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'test-results/junit.xml'
+                        }
+                    }
+                }
+            }
+            post {
+                success {
+                    stash name: 'source', includes: '**'
+                }
+            }
+        }
+        stage('Docker Flow') {
+            agent { label 'linux' }
+            steps {
+                unstash 'source'
+                sh '''
+                    docker build -t "${FULL_IMAGE}" .
+                    docker run -d --rm --name flask-todo-api-smoke "${FULL_IMAGE}"
+                    sleep 5
+                    docker exec flask-todo-api-smoke python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')"
+                    docker push "${FULL_IMAGE}"
+                '''
+            }
+            post {
+                always {
+                    sh '''
+                        docker rm -f flask-todo-api-smoke >/dev/null 2>&1 || true
+                        docker rmi "${FULL_IMAGE}" >/dev/null 2>&1 || true
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

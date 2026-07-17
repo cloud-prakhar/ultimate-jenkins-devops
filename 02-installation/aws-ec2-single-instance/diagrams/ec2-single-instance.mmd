@@ -1,0 +1,5 @@
+flowchart TD
+    USER[Learner workstation] --> SSM[AWS Systems Manager]
+    SSM --> EC2[Jenkins EC2 instance]
+    EC2 --> EBS[EBS root volume]
+    EC2 --> IAM[Instance profile]

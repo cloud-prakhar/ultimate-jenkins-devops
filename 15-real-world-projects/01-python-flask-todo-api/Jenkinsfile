@@ -1,0 +1,173 @@
+pipeline {
+    agent none
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '14'))
+        disableConcurrentBuilds()
+    }
+
+    parameters {
+        booleanParam(name: 'DEPLOY_LOCAL', defaultValue: false, description: 'Run the built container locally after push')
+    }
+
+    environment {
+        APP_NAME       = 'flask-todo-api'
+        REGISTRY       = 'localhost:5000'
+        IMAGE_TAG      = "${BUILD_NUMBER}"
+        FULL_IMAGE     = "${REGISTRY}/${APP_NAME}:${IMAGE_TAG}"
+        LATEST_IMAGE   = "${REGISTRY}/${APP_NAME}:latest"
+        SMOKE_NAME     = "flask-todo-api-smoke-${BUILD_NUMBER}"
+        DEPLOY_NAME    = "flask-todo-api-demo"
+    }
+
+    stages {
+        stage('Quality Gates') {
+            agent {
+                docker {
+                    image 'python:3.12-slim'
+                    label 'linux'
+                    args '-v /tmp/pip-cache:/root/.cache/pip'
+                }
+            }
+            stages {
+                stage('Checkout') {
+                    steps {
+                        checkout scm
+                        sh 'python --version'
+                    }
+                }
+                stage('Install Dependencies') {
+                    steps {
+                        sh '''
+                            pip install --upgrade pip
+                            pip install -r requirements.txt -r requirements-dev.txt
+                        '''
+                    }
+                }
+                stage('Static Analysis') {
+                    parallel {
+                        stage('flake8') {
+                            steps {
+                                sh 'flake8 app tests'
+                            }
+                        }
+                        stage('black') {
+                            steps {
+                                sh 'black --check app tests'
+                            }
+                        }
+                        stage('bandit') {
+                            steps {
+                                sh 'bandit -r app -f txt -o bandit-report.txt || true'
+                            }
+                            post {
+                                always {
+                                    archiveArtifacts artifacts: 'bandit-report.txt', allowEmptyArchive: true
+                                }
+                            }
+                        }
+                    }
+                }
+                stage('Unit Tests') {
+                    steps {
+                        sh '''
+                            mkdir -p test-results
+                            pytest tests \
+                              --junitxml=test-results/junit.xml \
+                              --cov=app \
+                              --cov-report=xml:coverage.xml \
+                              --cov-report=term-missing \
+                              --cov-fail-under=80
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'test-results/junit.xml'
+                            archiveArtifacts artifacts: 'coverage.xml', allowEmptyArchive: false
+                        }
+                    }
+                }
+            }
+            post {
+                success {
+                    stash name: 'source', includes: '**'
+                }
+            }
+        }
+
+        stage('Build Smoke Push') {
+            when {
+                beforeAgent true
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                }
+            }
+            agent {
+                label 'linux'
+            }
+            stages {
+                stage('Build Image') {
+                    steps {
+                        unstash 'source'
+                        sh '''
+                            docker build -t "${FULL_IMAGE}" -t "${LATEST_IMAGE}" .
+                        '''
+                    }
+                }
+                stage('Container Smoke Test') {
+                    steps {
+                        sh '''
+                            docker rm -f "${SMOKE_NAME}" >/dev/null 2>&1 || true
+                            docker run -d --rm --name "${SMOKE_NAME}" "${FULL_IMAGE}"
+                            sleep 5
+                            docker exec "${SMOKE_NAME}" python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health')"
+                        '''
+                    }
+                }
+                stage('Push Image') {
+                    steps {
+                        sh '''
+                            docker push "${FULL_IMAGE}"
+                            docker push "${LATEST_IMAGE}"
+                        '''
+                    }
+                }
+                stage('Conditional Local Deploy') {
+                    when {
+                        expression { return params.DEPLOY_LOCAL }
+                    }
+                    steps {
+                        sh '''
+                            docker rm -f "${DEPLOY_NAME}" >/dev/null 2>&1 || true
+                            docker run -d --name "${DEPLOY_NAME}" -p 5001:5000 "${FULL_IMAGE}"
+                            sleep 5
+                            curl -fsS http://127.0.0.1:5001/health >/dev/null
+                        '''
+                    }
+                }
+            }
+            post {
+                always {
+                    sh '''
+                        docker rm -f "${SMOKE_NAME}" >/dev/null 2>&1 || true
+                        docker rmi "${FULL_IMAGE}" >/dev/null 2>&1 || true
+                        docker rmi "${LATEST_IMAGE}" >/dev/null 2>&1 || true
+                    '''
+                }
+                failure {
+                    echo 'Build or registry flow failed. Check the local registry and Docker daemon.'
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

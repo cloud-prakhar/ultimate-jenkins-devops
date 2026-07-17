@@ -4,6 +4,14 @@
 
 This section covers every major method for installing Jenkins — from a simple local setup to production-grade Docker and Kubernetes deployments. You will learn to install, configure, and validate Jenkins across multiple environments.
 
+## Status
+
+| Content | Status |
+| --- | --- |
+| General installation guidance | ✅ Available |
+| [AWS EC2 single-instance live-demo lab](./aws-ec2-single-instance/README.md) | ✅ Available |
+| Additional installation tracks in this module | 🚧 In Progress |
+
 ---
 
 ## Objectives

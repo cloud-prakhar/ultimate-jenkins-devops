@@ -1,0 +1,7 @@
+flowchart LR
+    START[Run start-lab.sh] --> BUILD[Build local images]
+    BUILD --> UP[Start compose services]
+    UP --> JEN[Jenkins becomes healthy]
+    JEN --> SEC[Agent fetches secret]
+    SEC --> CONN[Agent connects over WebSocket]
+    CONN --> VERIFY[Run verify-lab.sh]

@@ -4,6 +4,14 @@
 
 Security is not optional in a Jenkins production environment. Jenkins has access to your source code, secrets, and deployment infrastructure — making it a high-value target. This section covers comprehensive security hardening, from authentication and authorization to secret management, agent security, and pipeline security controls.
 
+## Module Status
+
+| Field | Value |
+| --- | --- |
+| Status | 🚧 In Progress |
+| Practical references | [SECURITY.md](../SECURITY.md), [local lab](../00-local-lab-setup/README.md), [AWS EC2 lab](../02-installation/aws-ec2-single-instance/README.md) |
+| Migration note | This module still needs a full learner-template migration with exercises and validations |
+
 ---
 
 ## Security Domains

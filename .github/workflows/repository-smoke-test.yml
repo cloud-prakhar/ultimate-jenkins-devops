@@ -1,0 +1,37 @@
+name: Repository Smoke Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare env
+        run: cp 00-local-lab-setup/.env.example 00-local-lab-setup/.env
+
+      - name: Start local lab
+        run: |
+          chmod +x 00-local-lab-setup/scripts/*.sh
+          ./00-local-lab-setup/scripts/start-lab.sh
+
+      - name: Verify Jenkins API
+        run: curl -fsS http://127.0.0.1:8080/login >/dev/null
+
+      - name: Verify Gitea
+        run: curl -fsS http://127.0.0.1:3000/ >/dev/null
+
+      - name: Verify registry
+        run: curl -fsS http://127.0.0.1:5000/v2/ >/dev/null
+
+      - name: Verify agent container
+        run: docker compose -f 00-local-lab-setup/docker-compose.yml ps
+
+      - name: Stop local lab
+        if: always()
+        run: ./00-local-lab-setup/scripts/stop-lab.sh

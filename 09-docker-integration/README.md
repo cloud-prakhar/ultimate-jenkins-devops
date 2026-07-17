@@ -4,6 +4,14 @@
 
 Docker and Jenkins are the most widely used combination in CI/CD. This section covers every aspect of Docker integration — using Docker agents for clean builds, building production images, security scanning, multi-stage builds, registry management, and Docker Compose for testing environments.
 
+## Module Status
+
+| Field | Value |
+| --- | --- |
+| Status | 🚧 In Progress |
+| Practical reference | [Local lab](../00-local-lab-setup/README.md) and [Project 01](../15-real-world-projects/01-python-flask-todo-api/README.md) |
+| Migration note | This module still needs a full learner-template migration with guided exercises and validation scripts |
+
 ---
 
 ## Objectives

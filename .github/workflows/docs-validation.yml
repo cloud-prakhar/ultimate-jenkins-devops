@@ -1,0 +1,41 @@
+name: Documentation Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Mermaid CLI
+        run: npm install --global @mermaid-js/mermaid-cli
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: |
+            **/*.md
+
+      - name: Spell check
+        uses: crate-ci/typos@v1.31.1
+
+      - name: Link check
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --no-progress --accept 200,403,429 --verbose './**/*.md'
+          fail: true
+
+      - name: Validate Mermaid syntax
+        run: |
+          find . -name '*.mmd' -print0 | while IFS= read -r -d '' file; do
+            echo "Validating ${file}"
+            mmdc -i "${file}" -o /tmp/$(basename "${file}").svg >/dev/null 2>&1
+          done

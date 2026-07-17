@@ -4,6 +4,10 @@
 
 Jenkins troubleshooting is a critical skill. This section covers systematic approaches to diagnosing and resolving common Jenkins issues — from build failures and agent problems to performance issues and plugin conflicts.
 
+## Practical Lab
+
+Use the dedicated [debugging lab](./debugging-lab/README.md) for hands-on failure scenarios.
+
 ---
 
 ## Troubleshooting Methodology

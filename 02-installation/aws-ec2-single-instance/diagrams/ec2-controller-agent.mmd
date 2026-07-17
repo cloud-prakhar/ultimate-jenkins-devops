@@ -1,0 +1,4 @@
+flowchart LR
+    CTRL[Jenkins controller on EC2] --> Q[Build queue]
+    Q --> AGENT[Local or remote agent]
+    AGENT --> ART[Artifacts and reports]

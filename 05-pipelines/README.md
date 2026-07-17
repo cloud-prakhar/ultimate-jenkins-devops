@@ -4,6 +4,15 @@
 
 Jenkins Pipeline is the recommended approach for CI/CD in modern Jenkins. A Pipeline defines your entire build, test, and deployment process as code in a `Jenkinsfile`, committed to your repository. This section covers Pipeline fundamentals — the concepts, syntax, and key features that underpin both Declarative and Scripted pipelines.
 
+## Module Status
+
+| Field | Value |
+| --- | --- |
+| Status | 🚧 In Progress |
+| Environment | Local lab or any Jenkins instance |
+| Next practical lab | [Project 01 - Python Flask Todo API](../15-real-world-projects/01-python-flask-todo-api/README.md) |
+| Migration note | This module still needs a full learner-template migration with lab starter and solution assets |
+
 ---
 
 ## Objectives

@@ -1,0 +1,6 @@
+flowchart LR
+    SCM[Checkout] --> QA[Lint, format, bandit]
+    QA --> TEST[Pytest and JUnit]
+    TEST --> BUILD[Docker build]
+    BUILD --> SMOKE[Smoke test]
+    SMOKE --> PUSH[Push to local registry]

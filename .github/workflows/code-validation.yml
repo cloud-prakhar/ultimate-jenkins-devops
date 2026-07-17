@@ -1,0 +1,72 @@
+name: Code Validation
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+
+      - name: Hadolint
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 00-local-lab-setup/jenkins/Dockerfile
+
+      - name: Hadolint agent Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 00-local-lab-setup/agent/Dockerfile
+
+      - name: Hadolint Flask Dockerfile
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: 15-real-world-projects/01-python-flask-todo-api/Dockerfile
+
+      - name: YAML lint
+        run: yamllint .
+
+      - name: Docker Compose config
+        run: |
+          cp 00-local-lab-setup/.env.example 00-local-lab-setup/.env
+          docker compose -f 00-local-lab-setup/docker-compose.yml config
+          docker compose -f 15-real-world-projects/01-python-flask-todo-api/docker-compose.yml config
+
+      - name: Python tests
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r 15-real-world-projects/01-python-flask-todo-api/requirements.txt \
+                      -r 15-real-world-projects/01-python-flask-todo-api/requirements-dev.txt
+          pytest 15-real-world-projects/01-python-flask-todo-api/tests
+
+      - name: Docker image build
+        run: docker build -t flask-todo-api-ci 15-real-world-projects/01-python-flask-todo-api
+
+      - name: Terraform fmt
+        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform fmt -check
+
+      - name: Terraform init
+        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform init -backend=false
+
+      - name: Terraform validate
+        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform validate
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2

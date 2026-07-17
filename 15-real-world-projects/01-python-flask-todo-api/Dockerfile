@@ -16,8 +16,7 @@ WORKDIR /app
 # Docker caches each layer. If requirements.txt has not changed, this layer
 # is served from cache even when app code changes — making builds much faster.
 COPY requirements.txt .
-RUN pip install --upgrade pip --no-cache-dir && \
-    pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 
 # ── Stage 2: Production image ──────────────────────────────────────────────────
