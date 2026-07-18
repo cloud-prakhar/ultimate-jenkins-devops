@@ -16,16 +16,17 @@ Security is not optional in a Jenkins production environment. Jenkins has access
 
 ## Security Domains
 
-```
-Jenkins Security:
-├── Authentication          ← Who are you?
-├── Authorization           ← What can you do?
-├── Credential Management   ← How are secrets stored and used?
-├── Network Security        ← How is Jenkins exposed?
-├── Agent Security          ← How are agents secured?
-├── Pipeline Security       ← How are pipelines restricted?
-├── Plugin Security         ← How are plugins managed?
-└── Audit & Compliance      ← How is activity tracked?
+```mermaid
+flowchart LR
+    SEC[Jenkins Security]
+    SEC --> AUTHN["Authentication<br/>Who are you?"]
+    SEC --> AUTHZ["Authorization<br/>What can you do?"]
+    SEC --> CRED["Credential Management<br/>How are secrets stored and used?"]
+    SEC --> NET["Network Security<br/>How is Jenkins exposed?"]
+    SEC --> AGENT["Agent Security<br/>How are agents secured?"]
+    SEC --> PIPE["Pipeline Security<br/>How are pipelines restricted?"]
+    SEC --> PLUG["Plugin Security<br/>How are plugins managed?"]
+    SEC --> AUDIT["Audit and Compliance<br/>How is activity tracked?"]
 ```
 
 ---
@@ -175,7 +176,7 @@ jenkins:
 
 ### Credential Types and Best Practices
 
-```
+```text
 Secret Management Hierarchy:
   External Vault (HashiCorp Vault, AWS Secrets Manager)
       ↓ Dynamic secrets, rotation
@@ -573,7 +574,7 @@ unclassified:
 
 ### What to Audit
 
-```
+```text
 Critical events to audit:
 ✅ Login/logout (success and failure)
 ✅ Credential access
@@ -591,7 +592,7 @@ Critical events to audit:
 
 ## 9. Security Hardening Checklist
 
-```
+```text
 AUTHENTICATION:
 [ ] Use LDAP/SSO — disable local user database in production
 [ ] Disable sign-up for new users

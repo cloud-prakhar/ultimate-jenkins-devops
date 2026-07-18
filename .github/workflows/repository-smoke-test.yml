@@ -5,32 +5,40 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   smoke:
+    name: Local lab boots end to end
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      COMPOSE_FILE: 00-local-lab-setup/docker-compose.yml
     steps:
       - uses: actions/checkout@v4
 
       - name: Prepare env
         run: cp 00-local-lab-setup/.env.example 00-local-lab-setup/.env
 
-      - name: Start local lab
-        run: |
-          chmod +x 00-local-lab-setup/scripts/*.sh
-          ./00-local-lab-setup/scripts/start-lab.sh
+      # start-lab.sh already waits for the Jenkins healthcheck (the agent
+      # declares depends_on: service_healthy) and then runs verify-lab.sh,
+      # which asserts Jenkins, Gitea, the registry, and agent connectivity.
+      - name: Start and verify local lab
+        run: ./00-local-lab-setup/scripts/start-lab.sh
 
-      - name: Verify Jenkins API
-        run: curl -fsS http://127.0.0.1:8080/login >/dev/null
+      - name: Show service state
+        run: docker compose -f "${COMPOSE_FILE}" ps
 
-      - name: Verify Gitea
-        run: curl -fsS http://127.0.0.1:3000/ >/dev/null
-
-      - name: Verify registry
-        run: curl -fsS http://127.0.0.1:5000/v2/ >/dev/null
-
-      - name: Verify agent container
-        run: docker compose -f 00-local-lab-setup/docker-compose.yml ps
+      # Container logs are the first thing a learner needs when the lab does
+      # not come up, so surface them in the failing run itself.
+      - name: Dump container logs on failure
+        if: failure()
+        run: docker compose -f "${COMPOSE_FILE}" logs --tail 200
 
       - name: Stop local lab
         if: always()

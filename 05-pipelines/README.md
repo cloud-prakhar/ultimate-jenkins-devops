@@ -51,7 +51,7 @@ Jenkins Pipeline is the recommended approach for CI/CD in modern Jenkins. A Pipe
 
 A `Jenkinsfile` is a text file that contains the definition of a Jenkins Pipeline. It is checked into source control at the root of your repository.
 
-```
+```text
 my-project/
 ├── src/
 ├── tests/
@@ -64,30 +64,37 @@ my-project/
 
 Jenkins supports two pipeline syntaxes:
 
+| Aspect | Declarative | Scripted |
+| --- | --- | --- |
+| Syntax | Structured, opinionated | Full Groovy |
+| Learning curve | Simpler | Steeper |
+| Validation | Better (fails early) | Minimal |
+| Flexibility | Good for most cases | Maximum |
+| Recommendation | Use for ~95% of pipelines | Only when Declarative cannot express it |
+
+Declarative:
+
+```groovy
+pipeline {
+    agent { label 'linux' }
+    stages {
+        stage('Build') {
+            steps {
+                sh 'mvn package'
+            }
+        }
+    }
+}
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    JENKINS PIPELINE                       │
-│                                                          │
-│  ┌──────────────────────┐  ┌──────────────────────────┐  │
-│  │  DECLARATIVE         │  │  SCRIPTED                │  │
-│  │                      │  │                          │  │
-│  │  pipeline {          │  │  node('linux') {         │  │
-│  │    agent {...}       │  │    stage('Build') {      │  │
-│  │    stages {          │  │      sh 'mvn package'    │  │
-│  │      stage('Build')  │  │    }                     │  │
-│  │        steps {       │  │  }                       │  │
-│  │          sh '...'    │  │                          │  │
-│  │        }             │  │  Full Groovy power       │  │
-│  │      }               │  │  More complex            │  │
-│  │    }                 │  │  Less opinionated        │  │
-│  │  }                   │  │                          │  │
-│  │                      │  │                          │  │
-│  │  Structured          │  │                          │  │
-│  │  Simpler             │  │                          │  │
-│  │  Better validation   │  │                          │  │
-│  │  RECOMMENDED         │  │                          │  │
-│  └──────────────────────┘  └──────────────────────────┘  │
-└──────────────────────────────────────────────────────────┘
+
+Scripted:
+
+```groovy
+node('linux') {
+    stage('Build') {
+        sh 'mvn package'
+    }
+}
 ```
 
 > **Use Declarative** for 95% of use cases. It is simpler, better documented, and has IDE support.
@@ -674,7 +681,7 @@ Console: ${BUILD_URL}console
 
 ## Pipeline Execution Model
 
-```
+```text
 Jenkins Controller:
   1. Reads Jenkinsfile from SCM
   2. Compiles and validates Pipeline DSL
@@ -718,6 +725,7 @@ Jenkins includes a built-in snippet generator:
 Navigate to: `http://jenkins.example.com/pipeline-syntax/`
 
 Features:
+
 - **Snippet Generator** — Generate Pipeline steps from UI form
 - **Declarative Directive Generator** — Generate directives (agent, options, etc.)
 - **Global Variables Reference** — All available variables

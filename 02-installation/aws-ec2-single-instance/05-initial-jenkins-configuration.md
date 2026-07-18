@@ -10,9 +10,9 @@
 sudo cat /var/lib/jenkins/secrets/initialAdminPassword
 ```
 
-4. Install the suggested plugins.
-5. Create the first admin user.
-6. Set the Jenkins URL carefully.
+1. Install the suggested plugins.
+2. Create the first admin user.
+3. Set the Jenkins URL carefully.
 
 ## Why It Matters
 

@@ -21,40 +21,24 @@ Running Jenkins on Kubernetes is the gold standard for production CI/CD. Kuberne
 
 ## Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        KUBERNETES CLUSTER                           │
-│                                                                     │
-│  ┌─────────────────────────────────────────────────────────────┐   │
-│  │                    jenkins namespace                         │   │
-│  │                                                              │   │
-│  │  ┌─────────────────────────┐                                │   │
-│  │  │   Jenkins Controller    │                                │   │
-│  │  │   (StatefulSet/Deploy)  │                                │   │
-│  │  │                         │                                │   │
-│  │  │  Port 8080 (UI/API)     │                                │   │
-│  │  │  Port 50000 (agents)    │                                │   │
-│  │  │                         │                                │   │
-│  │  │  PVC: jenkins-home      │                                │   │
-│  │  │  (20Gi persistent)      │                                │   │
-│  │  └────────────┬────────────┘                                │   │
-│  │               │ Spawns agent pods                           │   │
-│  │               ▼                                             │   │
-│  │  ┌──────────────────────────────────────────────────┐      │   │
-│  │  │  Agent Pod (ephemeral)                           │      │   │
-│  │  │  ┌──────────┐  ┌──────────┐  ┌──────────────┐  │      │   │
-│  │  │  │  jnlp    │  │  maven   │  │    docker    │  │      │   │
-│  │  │  │ container│  │ container│  │   container  │  │      │   │
-│  │  │  └──────────┘  └──────────┘  └──────────────┘  │      │   │
-│  │  │  Deleted after build completes                   │      │   │
-│  │  └──────────────────────────────────────────────────┘      │   │
-│  └─────────────────────────────────────────────────────────────┘   │
-│                                                                     │
-│  ┌──────────┐   ┌──────────────┐   ┌──────────────────────────┐   │
-│  │ Ingress  │   │  Production  │   │   Staging Namespace       │   │
-│  │  (TLS)   │   │  Namespace   │   │                          │   │
-│  └──────────┘   └──────────────┘   └──────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph CLUSTER["Kubernetes Cluster"]
+        subgraph NS["jenkins namespace"]
+            CTRL["Jenkins Controller<br/>(StatefulSet / Deployment)<br/>Port 8080 UI/API - Port 50000 agents<br/>PVC: jenkins-home (20Gi persistent)"]
+            subgraph POD["Agent Pod (ephemeral, deleted after build)"]
+                direction LR
+                JNLP[jnlp container]
+                MVN[maven container]
+                DKR[docker container]
+            end
+            CTRL -->|spawns agent pods| POD
+        end
+        ING["Ingress (TLS)"]
+        PROD[Production Namespace]
+        STG[Staging Namespace]
+    end
+    ING --> CTRL
 ```
 
 ---
@@ -430,7 +414,7 @@ jenkins:
 
 Navigate: **Manage Jenkins → Clouds → Add a new cloud → Kubernetes**
 
-```
+```text
 Kubernetes URL: (blank for in-cluster)
 Kubernetes Namespace: jenkins
 Jenkins URL: http://jenkins:8080

@@ -12,48 +12,48 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Jenkins User Handbook | https://www.jenkins.io/doc/book/ | Complete user guide |
-| Pipeline Syntax Reference | https://www.jenkins.io/doc/book/pipeline/syntax/ | All directives and options |
-| Pipeline Steps Reference | https://www.jenkins.io/doc/pipeline/steps/ | All available steps |
-| Declarative Pipeline | https://www.jenkins.io/doc/book/pipeline/declarative-pipeline/ | Declarative guide |
-| Shared Libraries | https://www.jenkins.io/doc/book/pipeline/shared-libraries/ | Library development |
-| Security Hardening | https://www.jenkins.io/doc/book/security/ | Security configuration |
-| Scaling Jenkins | https://www.jenkins.io/doc/book/scaling/ | Performance and scale |
+| Jenkins User Handbook | <https://www.jenkins.io/doc/book/> | Complete user guide |
+| Pipeline Syntax Reference | <https://www.jenkins.io/doc/book/pipeline/syntax/> | All directives and options |
+| Pipeline Steps Reference | <https://www.jenkins.io/doc/pipeline/steps/> | All available steps |
+| Declarative Pipeline | <https://www.jenkins.io/doc/book/pipeline/declarative-pipeline/> | Declarative guide |
+| Shared Libraries | <https://www.jenkins.io/doc/book/pipeline/shared-libraries/> | Library development |
+| Security Hardening | <https://www.jenkins.io/doc/book/security/> | Security configuration |
+| Scaling Jenkins | <https://www.jenkins.io/doc/book/scaling/> | Performance and scale |
 
 ### 🔒 Security
 
 | Resource | URL |
 |----------|-----|
-| 🚨 Security Advisories | https://www.jenkins.io/security/advisories/ |
-| Security Policies | https://www.jenkins.io/security/ |
-| Plugin Security | https://www.jenkins.io/doc/book/security/plugin-vulnerabilities/ |
+| 🚨 Security Advisories | <https://www.jenkins.io/security/advisories/> |
+| Security Policies | <https://www.jenkins.io/security/> |
+| Plugin Security | <https://www.jenkins.io/doc/book/security/plugin-vulnerabilities/> |
 
 ### 🔌 Plugins (Official Index)
 
 | Resource | URL |
 |----------|-----|
-| Plugin Index | https://plugins.jenkins.io/ |
-| ☸️ Kubernetes Plugin | https://plugins.jenkins.io/kubernetes/ |
-| 🐳 Docker Workflow | https://plugins.jenkins.io/docker-workflow/ |
-| ⚙️ JCasC Plugin | https://plugins.jenkins.io/configuration-as-code/ |
-| 🛡️ Role Strategy | https://plugins.jenkins.io/role-strategy/ |
-| 🌊 Blue Ocean | https://plugins.jenkins.io/blueocean/ |
-| 🛠️ Pipeline Utility Steps | https://plugins.jenkins.io/pipeline-utility-steps/ |
-| 🔑 Credentials Binding | https://plugins.jenkins.io/credentials-binding/ |
-| 📊 Prometheus Metrics | https://plugins.jenkins.io/prometheus/ |
-| 🔐 Vault Plugin | https://plugins.jenkins.io/hashicorp-vault-plugin/ |
-| 📋 Job DSL Plugin | https://plugins.jenkins.io/job-dsl/ |
-| 💬 Slack Notification | https://plugins.jenkins.io/slack/ |
+| Plugin Index | <https://plugins.jenkins.io/> |
+| ☸️ Kubernetes Plugin | <https://plugins.jenkins.io/kubernetes/> |
+| 🐳 Docker Workflow | <https://plugins.jenkins.io/docker-workflow/> |
+| ⚙️ JCasC Plugin | <https://plugins.jenkins.io/configuration-as-code/> |
+| 🛡️ Role Strategy | <https://plugins.jenkins.io/role-strategy/> |
+| 🌊 Blue Ocean | <https://plugins.jenkins.io/blueocean/> |
+| 🛠️ Pipeline Utility Steps | <https://plugins.jenkins.io/pipeline-utility-steps/> |
+| 🔑 Credentials Binding | <https://plugins.jenkins.io/credentials-binding/> |
+| 📊 Prometheus Metrics | <https://plugins.jenkins.io/prometheus/> |
+| 🔐 Vault Plugin | <https://plugins.jenkins.io/hashicorp-vault-plugin/> |
+| 📋 Job DSL Plugin | <https://plugins.jenkins.io/job-dsl/> |
+| 💬 Slack Notification | <https://plugins.jenkins.io/slack/> |
 
 ### 🐙 GitHub Repositories
 
 | Resource | URL |
 |----------|-----|
-| Jenkins Core | https://github.com/jenkinsci/jenkins |
-| Jenkins Helm Charts | https://github.com/jenkinsci/helm-charts |
-| Jenkins Docker Images | https://github.com/jenkinsci/docker |
-| JenkinsPipelineUnit | https://github.com/jenkinsci/JenkinsPipelineUnit |
-| Pipeline Plugin | https://github.com/jenkinsci/pipeline-plugin |
+| Jenkins Core | <https://github.com/jenkinsci/jenkins> |
+| Jenkins Helm Charts | <https://github.com/jenkinsci/helm-charts> |
+| Jenkins Docker Images | <https://github.com/jenkinsci/docker> |
+| JenkinsPipelineUnit | <https://github.com/jenkinsci/JenkinsPipelineUnit> |
+| Pipeline Plugin | <https://github.com/jenkinsci/pipeline-plugin> |
 
 ---
 
@@ -61,14 +61,14 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Docker Documentation | https://docs.docker.com/ | Complete Docker docs |
-| Dockerfile Reference | https://docs.docker.com/engine/reference/builder/ | All Dockerfile instructions |
-| Docker Compose | https://docs.docker.com/compose/ | Multi-container applications |
-| Best Practices | https://docs.docker.com/develop/develop-images/dockerfile_best-practices/ | Image optimization |
-| 🔒 Docker Security | https://docs.docker.com/engine/security/ | Container security |
-| Docker Hub | https://hub.docker.com/ | Public registry |
-| ⚡ BuildKit | https://docs.docker.com/build/buildkit/ | Advanced build engine |
-| 🔍 Docker Scout | https://docs.docker.com/scout/ | Container analysis |
+| Docker Documentation | <https://docs.docker.com/> | Complete Docker docs |
+| Dockerfile Reference | <https://docs.docker.com/engine/reference/builder/> | All Dockerfile instructions |
+| Docker Compose | <https://docs.docker.com/compose/> | Multi-container applications |
+| Best Practices | <https://docs.docker.com/develop/develop-images/dockerfile_best-practices/> | Image optimization |
+| 🔒 Docker Security | <https://docs.docker.com/engine/security/> | Container security |
+| Docker Hub | <https://hub.docker.com/> | Public registry |
+| ⚡ BuildKit | <https://docs.docker.com/build/buildkit/> | Advanced build engine |
+| 🔍 Docker Scout | <https://docs.docker.com/scout/> | Container analysis |
 
 ---
 
@@ -76,16 +76,16 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| Kubernetes Docs | https://kubernetes.io/docs/ | Complete K8s documentation |
-| kubectl Reference | https://kubernetes.io/docs/reference/kubectl/ | CLI reference |
-| 🔒 Pod Security | https://kubernetes.io/docs/concepts/security/pod-security-standards/ | Security standards |
-| 🌐 Network Policies | https://kubernetes.io/docs/concepts/services-networking/network-policies/ | Network security |
-| 🛡️ RBAC | https://kubernetes.io/docs/reference/access-authn-authz/rbac/ | Access control |
-| 🚀 Deployments | https://kubernetes.io/docs/concepts/workloads/controllers/deployment/ | Deployment strategies |
-| ⛵ Helm Docs | https://helm.sh/docs/ | Helm package manager |
-| 🗂️ Helm Hub | https://artifacthub.io/ | Helm chart repository |
-| 🐙 ArgoCD | https://argo-cd.readthedocs.io/ | GitOps CD |
-| 🔀 Flux | https://fluxcd.io/docs/ | GitOps CD alternative |
+| Kubernetes Docs | <https://kubernetes.io/docs/> | Complete K8s documentation |
+| kubectl Reference | <https://kubernetes.io/docs/reference/kubectl/> | CLI reference |
+| 🔒 Pod Security | <https://kubernetes.io/docs/concepts/security/pod-security-standards/> | Security standards |
+| 🌐 Network Policies | <https://kubernetes.io/docs/concepts/services-networking/network-policies/> | Network security |
+| 🛡️ RBAC | <https://kubernetes.io/docs/reference/access-authn-authz/rbac/> | Access control |
+| 🚀 Deployments | <https://kubernetes.io/docs/concepts/workloads/controllers/deployment/> | Deployment strategies |
+| ⛵ Helm Docs | <https://helm.sh/docs/> | Helm package manager |
+| 🗂️ Helm Hub | <https://artifacthub.io/> | Helm chart repository |
+| 🐙 ArgoCD | <https://argo-cd.readthedocs.io/> | GitOps CD |
+| 🔀 Flux | <https://fluxcd.io/docs/> | GitOps CD alternative |
 
 ---
 
@@ -93,12 +93,12 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| 📈 DORA Research | https://dora.dev/ | DevOps metrics and research |
-| 🗺️ CNCF Landscape | https://landscape.cncf.io/ | Cloud native tools map |
-| 🔄 CNCF CI/CD | https://landscape.cncf.io/card-mode?category=continuous-integration-delivery | CI/CD tools |
-| 12-Factor App | https://12factor.net/ | App development principles |
-| 🌿 GitOps Principles | https://opengitops.dev/ | GitOps specification |
-| 🛡️ OpenSSF | https://openssf.org/ | Open source security |
+| 📈 DORA Research | <https://dora.dev/> | DevOps metrics and research |
+| 🗺️ CNCF Landscape | <https://landscape.cncf.io/> | Cloud native tools map |
+| 🔄 CNCF CI/CD | <https://landscape.cncf.io/card-mode?category=continuous-integration-delivery> | CI/CD tools |
+| 12-Factor App | <https://12factor.net/> | App development principles |
+| 🌿 GitOps Principles | <https://opengitops.dev/> | GitOps specification |
+| 🛡️ OpenSSF | <https://openssf.org/> | Open source security |
 
 ---
 
@@ -106,14 +106,14 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| ⚠️ OWASP Top 10 | https://owasp.org/www-project-top-ten/ | Web security risks |
-| ⚠️ OWASP CI/CD Risks | https://owasp.org/www-project-top-10-ci-cd-security-risks/ | CI/CD security risks |
-| 📜 NIST SP 800-204 | https://csrc.nist.gov/publications/detail/sp/800-204/final | Microservices security |
-| 🔐 HashiCorp Vault | https://developer.hashicorp.com/vault/docs | Secret management |
-| ✍️ Cosign (Sigstore) | https://docs.sigstore.dev/ | Image signing |
-| 🔍 Trivy | https://trivy.dev/ | Vulnerability scanner |
-| 📦 Syft | https://github.com/anchore/syft | SBOM generation |
-| 📋 OPA | https://www.openpolicyagent.org/ | Policy as Code |
+| ⚠️ OWASP Top 10 | <https://owasp.org/www-project-top-ten/> | Web security risks |
+| ⚠️ OWASP CI/CD Risks | <https://owasp.org/www-project-top-10-ci-cd-security-risks/> | CI/CD security risks |
+| 📜 NIST SP 800-204 | <https://csrc.nist.gov/publications/detail/sp/800-204/final> | Microservices security |
+| 🔐 HashiCorp Vault | <https://developer.hashicorp.com/vault/docs> | Secret management |
+| ✍️ Cosign (Sigstore) | <https://docs.sigstore.dev/> | Image signing |
+| 🔍 Trivy | <https://trivy.dev/> | Vulnerability scanner |
+| 📦 Syft | <https://github.com/anchore/syft> | SBOM generation |
+| 📋 OPA | <https://www.openpolicyagent.org/> | Policy as Code |
 
 ---
 
@@ -121,13 +121,13 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| 🔥 Prometheus | https://prometheus.io/docs/ | Metrics system |
-| 📈 Grafana | https://grafana.com/docs/ | Visualization |
-| 🚨 Alertmanager | https://prometheus.io/docs/alerting/ | Alert routing |
-| 🪵 Loki | https://grafana.com/docs/loki/ | Log aggregation |
-| 🔭 OpenTelemetry | https://opentelemetry.io/docs/ | Observability framework |
-| 🗂️ Grafana Dashboards | https://grafana.com/grafana/dashboards/ | Pre-built dashboards |
-| 🔎 PromQL | https://prometheus.io/docs/prometheus/latest/querying/basics/ | Query language |
+| 🔥 Prometheus | <https://prometheus.io/docs/> | Metrics system |
+| 📈 Grafana | <https://grafana.com/docs/> | Visualization |
+| 🚨 Alertmanager | <https://prometheus.io/docs/alerting/> | Alert routing |
+| 🪵 Loki | <https://grafana.com/docs/loki/> | Log aggregation |
+| 🔭 OpenTelemetry | <https://opentelemetry.io/docs/> | Observability framework |
+| 🗂️ Grafana Dashboards | <https://grafana.com/grafana/dashboards/> | Pre-built dashboards |
+| 🔎 PromQL | <https://prometheus.io/docs/prometheus/latest/querying/basics/> | Query language |
 
 ---
 
@@ -135,11 +135,11 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| 🌍 Terraform Docs | https://developer.hashicorp.com/terraform/docs | IaC platform |
-| 📦 Terraform Registry | https://registry.terraform.io/ | Providers and modules |
-| 🤖 Ansible Docs | https://docs.ansible.com/ | Configuration management |
-| 🌐 Pulumi Docs | https://www.pulumi.com/docs/ | IaC with real languages |
-| ☁️ AWS CDK | https://docs.aws.amazon.com/cdk/ | AWS CDK |
+| 🌍 Terraform Docs | <https://developer.hashicorp.com/terraform/docs> | IaC platform |
+| 📦 Terraform Registry | <https://registry.terraform.io/> | Providers and modules |
+| 🤖 Ansible Docs | <https://docs.ansible.com/> | Configuration management |
+| 🌐 Pulumi Docs | <https://www.pulumi.com/docs/> | IaC with real languages |
+| ☁️ AWS CDK | <https://docs.aws.amazon.com/cdk/> | AWS CDK |
 
 ---
 
@@ -147,12 +147,12 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| 🌳 Git Reference | https://git-scm.com/docs | Complete git reference |
-| 🐙 GitHub Actions | https://docs.github.com/en/actions | GitHub CI/CD |
-| 🪝 GitHub Webhooks | https://docs.github.com/en/webhooks | Webhook docs |
-| 🦊 GitLab CI/CD | https://docs.gitlab.com/ee/ci/ | GitLab CI/CD |
-| 📝 Conventional Commits | https://www.conventionalcommits.org/ | Commit message standard |
-| 🏷️ Semantic Versioning | https://semver.org/ | Versioning standard |
+| 🌳 Git Reference | <https://git-scm.com/docs> | Complete git reference |
+| 🐙 GitHub Actions | <https://docs.github.com/en/actions> | GitHub CI/CD |
+| 🪝 GitHub Webhooks | <https://docs.github.com/en/webhooks> | Webhook docs |
+| 🦊 GitLab CI/CD | <https://docs.gitlab.com/ee/ci/> | GitLab CI/CD |
+| 📝 Conventional Commits | <https://www.conventionalcommits.org/> | Commit message standard |
+| 🏷️ Semantic Versioning | <https://semver.org/> | Versioning standard |
 
 ---
 
@@ -174,15 +174,15 @@ This section catalogs authoritative references for every technology covered in t
 
 | Resource | URL | Description |
 |----------|-----|-------------|
-| 💬 Jenkins Community | https://community.jenkins.io/ | Q&A forum |
-| 🐛 Jenkins JIRA | https://issues.jenkins.io/ | Bug tracking |
-| 🐦 Jenkins Twitter | https://twitter.com/jenkinsci | Official announcements |
-| 🎥 Jenkins YouTube | https://www.youtube.com/@jenkinscicd | Tutorials and talks |
-| 💬 Kubernetes Slack | https://kubernetes.slack.com/ | Community Slack |
-| 🎥 CNCF YouTube | https://www.youtube.com/c/cloudnativefdn | CNCF talks |
-| 🎤 KubeCon Recordings | https://www.youtube.com/c/cloudnativefdn | Conference talks |
-| 🗓️ DevOps Days | https://devopsdays.org/ | Community events |
-| 🗓️ HashiConf | https://hashiconf.com/ | HashiCorp events |
+| 💬 Jenkins Community | <https://community.jenkins.io/> | Q&A forum |
+| 🐛 Jenkins JIRA | <https://issues.jenkins.io/> | Bug tracking |
+| 🐦 Jenkins Twitter | <https://twitter.com/jenkinsci> | Official announcements |
+| 🎥 Jenkins YouTube | <https://www.youtube.com/@jenkinscicd> | Tutorials and talks |
+| 💬 Kubernetes Slack | <https://kubernetes.slack.com/> | Community Slack |
+| 🎥 CNCF YouTube | <https://www.youtube.com/c/cloudnativefdn> | CNCF talks |
+| 🎤 KubeCon Recordings | <https://www.youtube.com/c/cloudnativefdn> | Conference talks |
+| 🗓️ DevOps Days | <https://devopsdays.org/> | Community events |
+| 🗓️ HashiConf | <https://hashiconf.com/> | HashiCorp events |
 
 ---
 
@@ -253,15 +253,17 @@ You have reached the end of the `ultimate-jenkins-devops` learning path.
 
 **Learning Path Completed:**
 
-```
-01 Fundamentals → 02 Installation → 03 UI → 04 Freestyle Jobs →
-05 Pipelines → 06 Declarative → 07 Scripted → 08 Shared Libraries →
-09 Docker → 10 Kubernetes → 11 Production → 12 Security →
-13 Monitoring → 14 Troubleshooting → 15 Projects → 16 Interviews →
-17 References ✅
+```mermaid
+flowchart LR
+    A[01 Fundamentals] --> B[02 Installation] --> C[03 UI] --> D[04 Freestyle Jobs]
+    D --> E[05 Pipelines] --> F[06 Declarative] --> G[07 Scripted] --> H[08 Shared Libraries]
+    H --> I[09 Docker] --> J[10 Kubernetes] --> K[11 Production] --> L[12 Security]
+    L --> M[13 Monitoring] --> N[14 Troubleshooting] --> O[15 Projects] --> P[16 Interviews]
+    P --> Q[17 References]
 ```
 
 **What's Next:**
+
 - 🤝 Contribute improvements via Pull Request
 - ⭐ Star the repository to support the community
 - 🚀 Apply these patterns in your organization

@@ -19,7 +19,7 @@ This section provides a comprehensive walkthrough of the Jenkins web interface. 
 
 ## Dashboard Overview
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  [Jenkins Logo]  Search  [User]  [Admin]  [Logout]              │
 ├─────────────────────────────────────────────────────────────────┤
@@ -45,6 +45,7 @@ This section provides a comprehensive walkthrough of the Jenkins web interface. 
 ### Dashboard
 
 The main page shows:
+
 - **Job list** with latest build status (color-coded)
 - **Build Queue** — builds waiting for an available executor
 - **Build Executor Status** — which executors are running what
@@ -87,7 +88,7 @@ For each job, navigate: **Job → Configure**
 
 ### General Tab
 
-```
+```text
 Description: Brief job description
 [ ] Discard old builds
     Keep last N builds: 10
@@ -102,7 +103,7 @@ Description: Brief job description
 
 ### Source Code Management
 
-```
+```text
 ● Git
   Repository URL: https://github.com/org/repo.git
   Credentials: [github-credentials]
@@ -116,7 +117,7 @@ Description: Brief job description
 
 ### Build Triggers
 
-```
+```text
 [ ] Trigger builds remotely (webhook)
     Authentication Token: [secure-random-token]
 
@@ -137,7 +138,7 @@ Description: Brief job description
 
 ### Jenkins Cron Syntax
 
-```
+```text
 # Field order: Minute Hour Day-of-Month Month Day-of-Week
 # Example schedules:
 
@@ -155,7 +156,7 @@ H H 1 * *          # Once per month (1st day)
 
 ### Build Environment
 
-```
+```text
 [ ] Delete workspace before build starts
 [ ] Use secret text(s) or file(s)
     Bindings:
@@ -170,7 +171,7 @@ H H 1 * *          # Once per month (1st day)
 
 ### Build Steps (Freestyle)
 
-```
+```text
 Execute shell:
   #!/bin/bash
   set -euo pipefail
@@ -187,7 +188,7 @@ Execute Windows batch command: (Windows agents only)
 
 ### Post-build Actions
 
-```
+```text
 Archive the artifacts:
   Files to archive: target/*.jar, target/*.war
 
@@ -281,7 +282,7 @@ Navigate: **Dashboard → Open Blue Ocean** (if installed)
 - **Test results** — Visual test result integration
 - **Artifacts** — Easy artifact browsing
 
-```
+```text
 Pipeline: my-java-app
 Branch: main  |  Build #42  |  Duration: 4m 23s  |  ✅ Success
 
@@ -294,7 +295,7 @@ Branch: main  |  Build #42  |  Duration: 4m 23s  |  ✅ Success
 
 In the classic UI, the Stage View plugin shows:
 
-```
+```text
 Stage View:
          Checkout   Build    Test     Docker   Deploy
 Build 42  ✅ 12s   ✅ 1m45  ✅ 1m3   ✅ 45s  ✅ 38s
@@ -308,7 +309,7 @@ Build 40  ✅ 10s   ✅ 1m39  ✅ 58s  ✅ 42s  ✅ 36s
 
 The console output is your primary debugging tool. Navigate: **Build → Console Output**
 
-```
+```text
 Started by user Admin
 Running in Durability level: MAX_SURVIVABILITY
 [Pipeline] Start of Pipeline
@@ -356,7 +357,7 @@ grep -i "error\|exception\|failed" build-42.log
 
 Navigate: **Job → Build History** (left sidebar)
 
-```
+```text
 Build History:
 #42  ✅  May 7 2026  4m 23s  main
 #41  ❌  May 7 2026  2m 11s  feature/payment
@@ -366,6 +367,7 @@ Build History:
 ```
 
 Each build entry links to:
+
 - Console Output
 - Parameters used
 - Changes (Git commits)
@@ -381,7 +383,7 @@ Navigate: **Manage Jenkins → Nodes and Clouds**
 
 ### Adding a Permanent Agent
 
-```
+```text
 Name: linux-agent-01
 Description: Ubuntu 22.04 build agent
 # of executors: 4
@@ -396,7 +398,7 @@ Launch method: Launch agent via SSH
 
 ### Node Monitoring
 
-```
+```text
 Node Status Dashboard:
   jenkins-controller  ✅  0/0 executors  (controller, no builds)
   linux-agent-01      ✅  2/4 executors  Ubuntu 22.04
@@ -412,7 +414,7 @@ Navigate: **Manage Jenkins → Security**
 
 ### Security Realm
 
-```
+```text
 ● Jenkins' own user database
   [ ] Allow users to sign up (disable in production)
 
@@ -428,7 +430,7 @@ Navigate: **Manage Jenkins → Security**
 
 ### Authorization
 
-```
+```text
 ○ Anyone can do anything (NEVER in production)
 ○ Legacy mode
 ● Role-Based Strategy (recommended)
@@ -441,7 +443,7 @@ Navigate: **Manage Jenkins → Security**
 
 Navigate: **Manage Jenkins → Manage and Assign Roles**
 
-```
+```text
 Global Roles:
   Role: admin
     Administer: ✅
@@ -475,7 +477,7 @@ Navigate: **Dashboard → + (New View)**
 
 ### View Types
 
-```
+```text
 List View:
   Name: Team Alpha
   Jobs: Include jobs matching regex: alpha-.*

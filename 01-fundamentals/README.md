@@ -43,16 +43,26 @@ Jenkins was originally created as **Hudson** at Sun Microsystems in 2004 by Kohs
 
 Without CI/CD automation:
 
-```
-Developer writes code → manually runs tests → manually builds artifacts
-→ manually deploys → manually verifies → repeat for every change
+```mermaid
+flowchart LR
+    A[Developer writes code] --> B[Manually runs tests]
+    B --> C[Manually builds artifacts]
+    C --> D[Manually deploys]
+    D --> E[Manually verifies]
+    E -->|repeat for every change| A
 ```
 
 With Jenkins:
 
-```
-Developer pushes code → Jenkins automatically triggers
-→ builds → tests → scans → packages → deploys → notifies
+```mermaid
+flowchart LR
+    A[Developer pushes code] --> B[Jenkins triggers automatically]
+    B --> C[Build]
+    C --> D[Test]
+    D --> E[Scan]
+    E --> F[Package]
+    F --> G[Deploy]
+    G --> H[Notify]
 ```
 
 Jenkins solves:
@@ -65,19 +75,122 @@ Jenkins solves:
 
 ---
 
+## Introduction to CI/CD (Start Here)
+
+If you are brand new, read this before the formal definitions below. No
+jargon — just the idea.
+
+### CI/CD in one sentence
+
+> **CI/CD is a robot assistant that automatically checks, assembles, and
+> ships your software every time you change the code — so humans stop doing
+> the slow, boring, mistake-prone parts by hand.**
+
+That is the whole concept. Everything else is detail.
+
+### The problem it solves: "integration day"
+
+Imagine five people writing one book. For a month, each writes their own
+chapters alone, never comparing notes. On the last day, they try to staple
+all the chapters into a single book.
+
+Chaos. Chapter 3 refers to a character Chapter 7 already killed off. Two
+people wrote the same scene differently. The page numbers don't line up.
+Fixing it takes longer than the writing did.
+
+That painful "last day" is exactly what software teams used to call
+**integration day** — everyone merging a month of code at once and spending
+days untangling the conflicts.
+
+**Continuous Integration** says: *don't wait for the last day.* Merge your
+work into the shared book **many times a day**, and have a robot re-read the
+whole book after every change to catch contradictions immediately — while
+they are tiny and easy to fix.
+
+**Continuous Delivery / Deployment** extends the same idea to shipping:
+*don't save releases for a scary "release weekend."* Keep the software
+always ready to publish, and let the robot push it out safely, in small
+steps, any day of the week.
+
+### The two halves, in plain language
+
+| Term | What it means | Everyday analogy |
+|------|---------------|------------------|
+| **CI** — Continuous Integration | Every code change is automatically merged, built, and tested right away | A spell-checker that re-checks the whole document the instant you type |
+| **CD** — Continuous Delivery | Every change that passes is automatically prepared and staged, ready to release with one click | A finished parcel, packed and addressed, waiting by the door for you to say "send" |
+| **CD** — Continuous Deployment | Same as above, but the parcel is sent automatically — no human click | The parcel ships itself the moment it's packed |
+
+> The two "CD"s share initials on purpose. **Delivery** keeps a human
+> approval button before production; **Deployment** removes even that button.
+> Delivery is "ready to ship anytime"; Deployment is "ships itself."
+
+### The pipeline: think of a factory conveyor belt
+
+CI/CD runs your code along an automated **conveyor belt**. Your change hops
+on at one end; if it survives every station, working software rolls off the
+other end. If it fails any station, the belt stops and tells you exactly
+which station rejected it.
+
+```mermaid
+flowchart LR
+    DEV["You push a<br/>code change"] --> BUILD["Assemble<br/>(build)"]
+    BUILD --> TEST["Auto-test<br/>(does it work?)"]
+    TEST --> SCAN["Safety check<br/>(is it secure?)"]
+    SCAN --> STAGE["Stage<br/>(dress rehearsal)"]
+    STAGE --> PROD["Release<br/>(customers get it)"]
+    TEST -.->|any failure stops<br/>the belt & pings you| DEV
+```
+
+### Real-world examples
+
+- **Amazon** deploys a code change to production roughly **every 11.7
+  seconds** on average across its teams. That is only possible because
+  robots — not humans — run the checks and the release. No team could click
+  "deploy" that often by hand.
+- **Netflix** pushes thousands of changes a day. When your recommendations
+  quietly improve overnight, a CI/CD pipeline shipped that change while you
+  slept, tested it on a slice of users, and kept it only because the numbers
+  looked good.
+- **A two-person startup** uses the *same* idea at tiny scale: a developer
+  pushes a fix at 2 p.m., a free pipeline builds and tests it in five
+  minutes, and the bug fix is live for customers before the coffee is cold —
+  with no "release process" meeting.
+- **Your bank's mobile app** likely uses **Continuous Delivery** (not
+  Deployment): every change is kept release-ready automatically, but a human
+  still presses the button for production, because a bad payments bug is
+  expensive. The robot does the work; a person keeps the final say.
+
+### Why teams bother: the payoff
+
+| Without CI/CD | With CI/CD |
+|---------------|------------|
+| "It works on my machine" 🤷 | It works on the robot's clean machine, so it works everywhere |
+| Bugs found days later, by customers | Bugs caught in minutes, by the pipeline |
+| Scary all-hands "release weekends" | Boring, boring releases — a non-event, any day |
+| "Who broke the build? When?" | The pipeline names the exact change and person |
+| Releases are rare, big, and risky | Releases are frequent, small, and safe |
+
+The core shift CI/CD gives a team is going from **"I hope this works"** to
+**"I know within minutes."** Jenkins, which the rest of this repo teaches, is
+one of the most popular robots that runs this conveyor belt.
+
+---
+
 ## What is CI/CD?
 
 ### Continuous Integration (CI)
 
 **Continuous Integration** is the practice of frequently merging developer changes into a shared repository, where automated builds and tests verify each integration.
 
-```
-┌──────────┐    ┌──────────┐    ┌──────────┐    ┌──────────┐
-│  Commit  │───▶│  Build   │───▶│   Test   │───▶│  Report  │
-└──────────┘    └──────────┘    └──────────┘    └──────────┘
+```mermaid
+flowchart LR
+    A[Commit] --> B[Build]
+    B --> C[Test]
+    C --> D[Report]
 ```
 
 Key CI principles:
+
 - Commit to mainline frequently (at least daily)
 - Every commit triggers an automated build
 - Build must be fast (< 10 minutes target)
@@ -88,16 +201,22 @@ Key CI principles:
 
 **Continuous Delivery** extends CI by automatically deploying every successful build to a staging environment, keeping software always in a releasable state.
 
-```
-CI Pipeline → Staging Deploy → Manual Approval Gate → Production Deploy
+```mermaid
+flowchart LR
+    A[CI Pipeline] --> B[Staging Deploy]
+    B --> C{Manual Approval Gate}
+    C -->|approved| D[Production Deploy]
 ```
 
 ### Continuous Deployment
 
 **Continuous Deployment** goes further — every successful build is automatically deployed to production with no manual gate.
 
-```
-CI Pipeline → Staging Deploy → Automated Tests → Auto Production Deploy
+```mermaid
+flowchart LR
+    A[CI Pipeline] --> B[Staging Deploy]
+    B --> C[Automated Tests]
+    C --> D[Auto Production Deploy]
 ```
 
 ### CI/CD Pipeline Stages
@@ -123,29 +242,29 @@ flowchart LR
 
 Understanding Jenkins architecture is critical for production deployments.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      JENKINS CONTROLLER                          │
-│                                                                  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Job Config  │  │  Build Queue │  │  Plugin System       │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
-│  │  Build History│  │  Credentials │  │  Pipeline Engine     │  │
-│  └──────────────┘  └──────────────┘  └──────────────────────┘  │
-│                                                                  │
-│                    JENKINS_HOME (/var/jenkins_home)              │
-└──────────────────────────┬──────────────────────────────────────┘
-                           │  JNLP / SSH / WebSocket
-              ┌────────────┼────────────┐
-              │            │            │
-              ▼            ▼            ▼
-      ┌──────────┐  ┌──────────┐  ┌──────────┐
-      │  Agent 1 │  │  Agent 2 │  │  Agent 3 │
-      │  (Linux) │  │ (Windows)│  │ (Docker) │
-      └──────────┘  └──────────┘  └──────────┘
-       Executor 1    Executor 1    Executor 1
-       Executor 2    Executor 2    Executor 2
+```mermaid
+flowchart TD
+    subgraph CONTROLLER["Jenkins Controller"]
+        direction LR
+        JC[Job Config]
+        BQ[Build Queue]
+        PS[Plugin System]
+        BH[Build History]
+        CR[Credentials]
+        PE[Pipeline Engine]
+        HOME[("JENKINS_HOME<br/>/var/jenkins_home")]
+    end
+
+    CONTROLLER -->|JNLP / SSH / WebSocket| A1
+    CONTROLLER -->|JNLP / SSH / WebSocket| A2
+    CONTROLLER -->|JNLP / SSH / WebSocket| A3
+
+    subgraph AGENTS["Agents"]
+        direction LR
+        A1["Agent 1 — Linux<br/>Executor 1<br/>Executor 2"]
+        A2["Agent 2 — Windows<br/>Executor 1<br/>Executor 2"]
+        A3["Agent 3 — Docker<br/>Executor 1<br/>Executor 2"]
+    end
 ```
 
 ### Jenkins Controller (Master)
@@ -184,12 +303,13 @@ The **Jenkins Controller** is the central orchestration server. It:
 
 An **executor** is a slot for running one build at a time on an agent. An agent with 4 executors can run 4 concurrent builds.
 
-```
-Agent Machine
-├── Executor 1 → Build Job A
-├── Executor 2 → Build Job B
-├── Executor 3 → (idle)
-└── Executor 4 → Build Job C
+```mermaid
+flowchart LR
+    AGENT[Agent Machine]
+    AGENT --> E1[Executor 1] --> JA[Build Job A]
+    AGENT --> E2[Executor 2] --> JB[Build Job B]
+    AGENT --> E3[Executor 3] --> IDLE["(idle)"]
+    AGENT --> E4[Executor 4] --> JC[Build Job C]
 ```
 
 > **Tip:** Set executors equal to the number of CPU cores on the agent, minus one for OS overhead.
@@ -198,43 +318,81 @@ Agent Machine
 
 ## Jenkins Build Lifecycle
 
-```
-1. Trigger      → Webhook, schedule, manual, upstream job
-2. Queue        → Build added to the build queue
-3. Agent Select → Controller assigns build to available agent
-4. Workspace    → Agent prepares the workspace
-5. Checkout     → Source code pulled from SCM
-6. Stages       → Pipeline stages execute sequentially/in parallel
-7. Post Actions → Cleanup, notifications, artifact archiving
-8. Results      → Build marked SUCCESS/FAILURE/UNSTABLE/ABORTED
+```mermaid
+flowchart TD
+    T["1. Trigger<br/>webhook, schedule, manual, upstream job"]
+    Q["2. Queue<br/>build added to the build queue"]
+    S["3. Agent Select<br/>controller assigns build to an available agent"]
+    W["4. Workspace<br/>agent prepares the workspace"]
+    C["5. Checkout<br/>source code pulled from SCM"]
+    G["6. Stages<br/>pipeline stages run sequentially or in parallel"]
+    P["7. Post Actions<br/>cleanup, notifications, artifact archiving"]
+    R["8. Results<br/>SUCCESS / FAILURE / UNSTABLE / ABORTED"]
+
+    T --> Q --> S --> W --> C --> G --> P --> R
 ```
 
 ---
 
 ## Key Jenkins Terminology
 
-| Term | Definition |
-|------|-----------|
-| **Job** | A configured task that Jenkins can run |
-| **Build** | A single execution of a job |
-| **Pipeline** | A scripted series of stages defining CI/CD workflow |
-| **Stage** | A logical grouping of steps within a pipeline |
-| **Step** | A single action within a stage |
-| **Agent** | A machine that executes builds |
-| **Executor** | A thread/slot on an agent for running builds |
-| **Workspace** | A directory on the agent where build files live |
-| **Artifact** | A file produced by a build (JAR, Docker image, etc.) |
-| **Upstream** | A job that triggers another job |
-| **Downstream** | A job triggered by another job |
-| **Trigger** | The event that starts a build |
-| **SCM** | Source Control Management (Git, SVN, etc.) |
-| **Plugin** | Extension that adds functionality to Jenkins |
-| **Credentials** | Securely stored secrets (passwords, tokens, keys) |
-| **Node** | Any machine in the Jenkins cluster (controller or agent) |
-| **Label** | A tag used to route builds to specific agents |
-| **JCasC** | Jenkins Configuration as Code |
-| **Groovy** | The scripting language used in Jenkins pipelines |
-| **DSL** | Domain-Specific Language used in Pipeline and Job DSL |
+The **Everyday analogy** column translates each term into plain language.
+Think of Jenkins as an automated kitchen: recipes, cooks, and counters.
+
+| Term | Definition | Everyday analogy |
+|------|-----------|------------------|
+| **Job** | A configured task that Jenkins can run | A recipe on file |
+| **Build** | A single execution of a job | Cooking that recipe once |
+| **Pipeline** | A scripted series of stages defining a CI/CD workflow | The full recipe, step by step |
+| **Stage** | A logical grouping of steps within a pipeline | One course of the meal (prep, cook, plate) |
+| **Step** | A single action within a stage | One instruction ("chop onions") |
+| **Agent** | A machine that executes builds | A cook who does the actual work |
+| **Executor** | A thread/slot on an agent for running builds | A burner the cook can use — 4 burners, 4 dishes at once |
+| **Workspace** | A directory on the agent where build files live | The counter space for one dish |
+| **Artifact** | A file produced by a build (JAR, Docker image, etc.) | The finished plate handed to the customer |
+| **Upstream** | A job that triggers another job | The starter that signals the main course to begin |
+| **Downstream** | A job triggered by another job | The main course that waits on the starter |
+| **Trigger** | The event that starts a build | The order ticket coming in |
+| **SCM** | Source Control Management (Git, SVN, etc.) | The pantry the ingredients (code) come from |
+| **Plugin** | Extension that adds functionality to Jenkins | A specialty appliance added to the kitchen |
+| **Credentials** | Securely stored secrets (passwords, tokens, keys) | The locked safe for the keys |
+| **Node** | Any machine in the Jenkins cluster (controller or agent) | Anyone in the kitchen — head chef or cook |
+| **Label** | A tag used to route builds to specific agents | "Grill station only" on an order ticket |
+| **JCasC** | Jenkins Configuration as Code | Writing the kitchen rulebook as a file, not by memory |
+| **Groovy** | The scripting language used in Jenkins pipelines | The language the recipes are written in |
+| **DSL** | Domain-Specific Language used in Pipeline and Job DSL | A shorthand recipe notation |
+
+---
+
+## A Real-World Scenario: One Push, Ten Minutes Later
+
+Meet Priya, a developer on a payments team. Here is what Jenkins does for
+her on an ordinary Tuesday — and what it replaces.
+
+**Before Jenkins (manual):**
+
+1. Priya finishes a bug fix and pushes it.
+1. She pings a teammate to please pull, build, and test it.
+1. Someone runs the tests locally an hour later — they pass "on my machine."
+1. On Friday, ten changes are merged at once; two conflict; a bad one ships
+   to production over the weekend. Nobody is sure which change broke it.
+
+**With Jenkins (automated):**
+
+1. Priya pushes her fix. A **webhook** instantly **triggers** a **build**.
+1. Jenkins checks out the code, runs unit tests, scans for secrets, builds a
+   Docker **artifact**, and deploys it to a staging environment — all on an
+   **agent**, in about eight minutes.
+1. If anything fails, Jenkins posts the exact failing **stage** to Slack
+   before Priya has finished her coffee. She fixes it while the context is
+   fresh.
+1. Because every change is integrated and tested the moment it lands,
+   Friday's ten changes were already verified one at a time. No weekend
+   surprise.
+
+That shift — from "hope it works" to "know within minutes" — is the entire
+point of CI/CD, and Jenkins is one of the most common engines that provides
+it.
 
 ---
 
@@ -253,6 +411,7 @@ Agent Machine
 | Best for | Complex enterprise CI/CD | GitHub-native projects | GitLab users | Simple cloud CI | GitOps CD |
 
 > **When to Choose Jenkins:**
+>
 > - You need deep customization and control
 > - You have complex, multi-technology build requirements
 > - You need to run entirely on-premises
@@ -263,17 +422,13 @@ Agent Machine
 
 ## Where Jenkins Fits in a Modern DevOps Toolchain
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        DEVOPS TOOLCHAIN                             │
-│                                                                     │
-│  Plan    │  Code    │  Build   │  Test    │  Release  │  Deploy    │
-│          │          │          │          │           │            │
-│ Jira     │ Git      │ Jenkins  │ JUnit    │ Jenkins   │ Kubernetes │
-│ Confluence│ GitHub  │ Maven    │ Selenium │ Helm      │ ArgoCD     │
-│ Linear   │ GitLab   │ Gradle   │ SonarQube│ Nexus     │ Terraform  │
-│          │          │ Docker   │ OWASP    │ Harbor    │ Ansible    │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    PLAN["Plan<br/>Jira · Confluence · Linear"] --> CODE["Code<br/>Git · GitHub · GitLab"]
+    CODE --> BUILD["Build<br/>Jenkins · Maven · Gradle · Docker"]
+    BUILD --> TEST["Test<br/>JUnit · Selenium · SonarQube · OWASP"]
+    TEST --> RELEASE["Release<br/>Jenkins · Helm · Nexus · Harbor"]
+    RELEASE --> DEPLOY["Deploy<br/>Kubernetes · ArgoCD · Terraform · Ansible"]
 ```
 
 Jenkins sits at the **heart of the CI/CD pipeline**, orchestrating tools across every phase.

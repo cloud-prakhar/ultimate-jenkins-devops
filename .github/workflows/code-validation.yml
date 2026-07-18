@@ -5,27 +5,33 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: code-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  # Fast static checks. Split out so a lint failure reports separately from a
+  # test failure instead of hiding behind whichever step ran first.
+  lint:
+    name: Lint (shell, YAML, Dockerfiles)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.9.8
-
-      - name: Install yamllint
-        run: pip install yamllint
 
       - name: ShellCheck
         uses: ludeeus/action-shellcheck@2.0.0
 
-      - name: Hadolint
+      - name: Install yamllint
+        run: pip install yamllint
+
+      - name: YAML lint
+        run: yamllint .
+
+      - name: Hadolint Jenkins controller Dockerfile
         uses: hadolint/hadolint-action@v3.1.0
         with:
           dockerfile: 00-local-lab-setup/jenkins/Dockerfile
@@ -40,33 +46,83 @@ jobs:
         with:
           dockerfile: 15-real-world-projects/01-python-flask-todo-api/Dockerfile
 
-      - name: YAML lint
-        run: yamllint .
+  compose:
+    name: Docker Compose config
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
 
-      - name: Docker Compose config
+      - name: Validate compose files
         run: |
           cp 00-local-lab-setup/.env.example 00-local-lab-setup/.env
-          docker compose -f 00-local-lab-setup/docker-compose.yml config
-          docker compose -f 15-real-world-projects/01-python-flask-todo-api/docker-compose.yml config
+          docker compose -f 00-local-lab-setup/docker-compose.yml config >/dev/null
+          docker compose -f 15-real-world-projects/01-python-flask-todo-api/docker-compose.yml config >/dev/null
 
-      - name: Python tests
+  python:
+    name: Python tests and image build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      PROJECT_DIR: 15-real-world-projects/01-python-flask-todo-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            15-real-world-projects/01-python-flask-todo-api/requirements.txt
+            15-real-world-projects/01-python-flask-todo-api/requirements-dev.txt
+
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r 15-real-world-projects/01-python-flask-todo-api/requirements.txt \
-                      -r 15-real-world-projects/01-python-flask-todo-api/requirements-dev.txt
-          pytest 15-real-world-projects/01-python-flask-todo-api/tests
+          pip install -r "${PROJECT_DIR}/requirements.txt" \
+                      -r "${PROJECT_DIR}/requirements-dev.txt"
 
-      - name: Docker image build
-        run: docker build -t flask-todo-api-ci 15-real-world-projects/01-python-flask-todo-api
+      - name: Run tests
+        run: pytest "${PROJECT_DIR}/tests"
+
+      - name: Build application image
+        run: docker build -t flask-todo-api-ci "${PROJECT_DIR}"
+
+  terraform:
+    name: Terraform validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      TF_DIR: 02-installation/aws-ec2-single-instance/terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
 
       - name: Terraform fmt
-        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform fmt -check
+        run: terraform -chdir="${TF_DIR}" fmt -check -recursive
 
       - name: Terraform init
-        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform init -backend=false
+        run: terraform -chdir="${TF_DIR}" init -backend=false
 
       - name: Terraform validate
-        run: terraform -chdir=02-installation/aws-ec2-single-instance/terraform validate
+        run: terraform -chdir="${TF_DIR}" validate
 
-      - name: Secret scan
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks needs full history to scan every commit in a push range.
+          fetch-depth: 0
+
+      - name: Gitleaks
         uses: gitleaks/gitleaks-action@v2
+        env:
+          # Required by gitleaks-action v2. No GITLEAKS_LICENSE is needed
+          # while this repository lives under a personal account.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

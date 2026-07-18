@@ -31,8 +31,12 @@ Freestyle Jobs are the simplest type of Jenkins job — configured entirely thro
 
 A Freestyle job is a general-purpose, GUI-configured Jenkins job. You configure every aspect through forms in the web interface:
 
-```
-Source Code → Build Triggers → Build Environment → Build Steps → Post-Build Actions
+```mermaid
+flowchart LR
+    A[Source Code] --> B[Build Triggers]
+    B --> C[Build Environment]
+    C --> D[Build Steps]
+    D --> E[Post-Build Actions]
 ```
 
 ### Freestyle vs Pipeline
@@ -90,9 +94,9 @@ echo ""
 echo "Build SUCCESS!"
 ```
 
-5. Click **Save**
-6. Click **Build Now**
-7. Click on the build number → **Console Output**
+1. Click **Save**
+2. Click **Build Now**
+3. Click on the build number → **Console Output**
 
 ---
 
@@ -104,7 +108,7 @@ echo "Build SUCCESS!"
 
 ### Source Code Management
 
-```
+```text
 ● Git
   Repository URL: https://github.com/your-org/your-repo.git
   Credentials: [Select your GitHub credentials]
@@ -117,7 +121,7 @@ echo "Build SUCCESS!"
 
 ### Build Triggers
 
-```
+```text
 [x] Poll SCM
     Schedule: H/5 * * * *
 ```
@@ -157,14 +161,16 @@ Parameters make builds flexible — the same job can build different branches, v
 Under **General** → **[x] This project is parameterized**:
 
 **Parameter 1: String**
-```
+
+```text
 Name: BRANCH
 Default Value: main
 Description: Git branch to build (e.g., main, develop, feature/my-feature)
 ```
 
 **Parameter 2: Choice**
-```
+
+```text
 Name: ENVIRONMENT
 Choices:
   dev
@@ -174,14 +180,16 @@ Description: Target deployment environment
 ```
 
 **Parameter 3: Boolean**
-```
+
+```text
 Name: SKIP_TESTS
 Default Value: false
 Description: Skip test execution (use only for hotfix deployments)
 ```
 
 **Parameter 4: String**
-```
+
+```text
 Name: VERSION
 Default Value: 1.0.${BUILD_NUMBER}
 Description: Artifact version to produce
@@ -189,7 +197,7 @@ Description: Artifact version to produce
 
 ### Source Code Management
 
-```
+```text
 Git Repository URL: https://github.com/your-org/your-repo.git
 Branch: */${BRANCH}
 ```
@@ -264,6 +272,7 @@ Webhooks trigger builds instantly on code push — far better than polling.
 3. Ensure **GitHub hook trigger for GITScm polling** is enabled on the job
 
 For token-based webhook:
+
 1. In job **Configure** → **Build Triggers**
 2. Enable **Trigger builds remotely (e.g., from scripts)**
 3. Set Authentication Token: `MY-SECRET-TOKEN-RANDOM-STRING`
@@ -274,7 +283,7 @@ For token-based webhook:
 1. Navigate to your GitHub repository
 2. **Settings → Webhooks → Add webhook**
 
-```
+```text
 Payload URL: https://jenkins.example.com/github-webhook/
 Content type: application/json
 Secret: (leave empty or set a shared secret)
@@ -284,7 +293,7 @@ Active: ✅
 
 ### GitLab Setup
 
-```
+```text
 Settings → Integrations → Jenkins CI
 Jenkins URL: https://jenkins.example.com
 Project name: your-job-name
@@ -312,13 +321,15 @@ mvn -version
 ### Configure
 
 **Source Code Management:**
-```
+
+```text
 Git URL: https://github.com/your-org/java-app.git
 Branch: */main
 ```
 
 **Build Steps** → **Invoke top-level Maven targets:**
-```
+
+```text
 Maven version: Maven-3.9
 Goals: clean package
 POM: pom.xml
@@ -354,7 +365,7 @@ ls -la target/*.jar 2>/dev/null || ls -la target/*.war 2>/dev/null || echo "No J
 
 **Post-build Actions:**
 
-```
+```text
 Publish JUnit test result report:
   Test report XMLs: target/surefire-reports/*.xml, target/failsafe-reports/*.xml
   [ ] Retain long standard output/error
@@ -375,6 +386,7 @@ Chain jobs together to create a simple pipeline.
 1. **New Item** → `06-ci-build` → **Freestyle project**
 
 **Build Steps:**
+
 ```bash
 #!/bin/bash
 set -euo pipefail
@@ -386,7 +398,8 @@ echo "Build complete"
 ```
 
 **Post-build Actions:**
-```
+
+```text
 Archive the artifacts: build.properties
 
 Trigger parameterized build on other projects:
@@ -401,12 +414,14 @@ Trigger parameterized build on other projects:
 1. **New Item** → `06-cd-deploy` → **Freestyle project**
 
 **General:**
-```
+
+```text
 [x] This project is parameterized
   String parameter: BUILD_VERSION
 ```
 
 **Build Steps:**
+
 ```bash
 #!/bin/bash
 set -euo pipefail
@@ -490,7 +505,7 @@ set -euo pipefail
 
 ### 2. Set a Build Timeout
 
-```
+```text
 Build Environment:
 [x] Abort the build if it's stuck
     Timeout: 30 minutes
@@ -499,7 +514,7 @@ Build Environment:
 
 ### 3. Clean Workspace
 
-```
+```text
 Build Environment:
 [x] Delete workspace before build starts
 
@@ -509,7 +524,7 @@ Post-build Actions:
 
 ### 4. Limit Build History
 
-```
+```text
 General:
 [x] Discard old builds
     Max # of builds to keep: 20
@@ -518,7 +533,7 @@ General:
 
 ### 5. Use Credentials Binding
 
-```
+```text
 Build Environment:
 [x] Use secret text(s) or file(s)
   Secret text:
@@ -532,7 +547,7 @@ Build Environment:
 
 ### 6. Archive Important Artifacts
 
-```
+```text
 Post-build Actions:
 Archive the artifacts:
   target/*.jar
@@ -584,7 +599,7 @@ emailext(
 
 ### Build Not Triggering
 
-```
+```text
 ✅ Verify webhook URL is accessible from GitHub (test with curl)
 ✅ Check Jenkins system log for webhook receipt
 ✅ Verify GitHub webhook delivery (Settings → Webhooks → Recent Deliveries)

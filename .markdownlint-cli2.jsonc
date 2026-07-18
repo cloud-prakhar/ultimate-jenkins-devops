@@ -1,0 +1,30 @@
+// Markdown lint rules for the Jenkins learning repository.
+// Prose-style rules are relaxed; rules that affect readability or
+// rendering correctness are kept enforced.
+{
+  "config": {
+    "default": true,
+
+    // Long lines are fine in teaching prose and wide tables.
+    "MD013": false,
+
+    // Table column padding is cosmetic and churns diffs.
+    "MD060": false,
+
+    // Modules intentionally repeat section names such as
+    // "Expected Output" and "Troubleshooting" under different parents.
+    "MD024": { "siblings_only": true },
+
+    // Bold lead-ins are used as inline labels, not headings.
+    "MD036": false,
+
+    // Fenced code blocks must declare a language so syntax
+    // highlighting and mermaid rendering work.
+    "MD040": true
+  },
+  "globs": ["**/*.md"],
+  "ignores": [
+    "**/node_modules/**",
+    "**/.terraform/**"
+  ]
+}

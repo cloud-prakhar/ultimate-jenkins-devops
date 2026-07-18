@@ -236,25 +236,13 @@ Jenkins HA is complex because Jenkins state is stored on disk (JENKINS_HOME). Th
 
 ### Option A: Active-Passive with Shared Storage
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                                                                  │
-│  Load Balancer (Routes all traffic to Active instance)          │
-│       │                                                         │
-│  ┌────▼────┐                    ┌───────────┐                   │
-│  │ Jenkins │                    │  Jenkins  │                   │
-│  │ Active  │                    │  Standby  │                   │
-│  │  Pod 1  │                    │   Pod 2   │                   │
-│  └────┬────┘                    └─────┬─────┘                   │
-│       │                               │                         │
-│       └───────────┬───────────────────┘                         │
-│                   │                                             │
-│           ┌───────▼────────┐                                    │
-│           │  Shared NFS /  │                                    │
-│           │  EFS / Ceph    │                                    │
-│           │  (JENKINS_HOME)│                                    │
-│           └────────────────┘                                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    LB["Load Balancer<br/>(routes all traffic to the active instance)"]
+    LB --> ACTIVE["Jenkins Active<br/>Pod 1"]
+    LB -.standby.-> STANDBY["Jenkins Standby<br/>Pod 2"]
+    ACTIVE --> STORE["Shared NFS / EFS / Ceph<br/>(JENKINS_HOME)"]
+    STANDBY --> STORE
 ```
 
 ```yaml
@@ -299,6 +287,7 @@ spec:
 ### Option B: CloudBees CI (Enterprise HA)
 
 CloudBees CI provides true active-active HA for Jenkins. Recommended for:
+
 - Large organizations (> 500 developers)
 - > 1,000 builds per day
 - Multi-region deployments
@@ -306,21 +295,15 @@ CloudBees CI provides true active-active HA for Jenkins. Recommended for:
 
 ### Option C: Operations Center + Controllers (Recommended for Scale)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     OPERATIONS CENTER                            │
-│  (Manages multiple Jenkins controllers)                         │
-│                                                                  │
-│  ┌────────────┐  ┌────────────┐  ┌────────────┐                │
-│  │ Controller │  │ Controller │  │ Controller │                │
-│  │ Team Alpha │  │ Team Beta  │  │ Platform   │                │
-│  └────────────┘  └────────────┘  └────────────┘                │
-│                                                                  │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │                    Shared Agent Pool                        │ │
-│  │  (Kubernetes dynamic agents shared across controllers)      │ │
-│  └────────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    OC["Operations Center<br/>(manages multiple Jenkins controllers)"]
+    OC --> A[Controller: Team Alpha]
+    OC --> B[Controller: Team Beta]
+    OC --> P[Controller: Platform]
+    A --> POOL["Shared Agent Pool<br/>(Kubernetes dynamic agents shared across controllers)"]
+    B --> POOL
+    P --> POOL
 ```
 
 ---
@@ -654,7 +637,7 @@ spec:
 
 ### Key Jenkins Metrics (Prometheus)
 
-```
+```text
 # Build queue
 jenkins_queue_size_value
 

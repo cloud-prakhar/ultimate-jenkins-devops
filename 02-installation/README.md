@@ -357,7 +357,7 @@ Navigate to **Manage Jenkins → System**:
 
 Navigate to **Manage Jenkins → Tools**:
 
-```
+```text
 JDK Installations:
   Name: JDK-21
   Install automatically: ✅
@@ -382,7 +382,7 @@ Git:
 
 Navigate to **Manage Jenkins → Credentials → System → Global credentials**:
 
-```
+```text
 Kind: Username with password
 Scope: Global
 Username: your-github-username
@@ -391,7 +391,7 @@ ID: github-credentials
 Description: GitHub PAT for SCM operations
 ```
 
-```
+```text
 Kind: Secret text
 Scope: Global
 Secret: your-docker-hub-token
@@ -404,6 +404,7 @@ Description: Docker Hub access token
 Navigate to **Manage Jenkins → Plugins → Available plugins**:
 
 Search and install:
+
 - Blue Ocean
 - Kubernetes
 - Docker Pipeline
@@ -419,7 +420,7 @@ Search and install:
 
 ## Jenkins Directory Structure
 
-```
+```text
 /var/jenkins_home/           (or JENKINS_HOME)
 ├── config.xml               ← Jenkins system configuration
 ├── credentials.xml          ← Encrypted credentials store

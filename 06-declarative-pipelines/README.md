@@ -241,7 +241,8 @@ pipeline {
 ```
 
 **Matrix produces:**
-```
+
+```text
 Cross-Platform Tests
 ├── (linux, 17)
 ├── (linux, 21)
@@ -541,7 +542,7 @@ pipeline {
 
 ### Branch Source Configuration (GitHub)
 
-```
+```text
 Branch Sources:
   GitHub:
     Credentials: github-credentials
@@ -566,7 +567,7 @@ Scan Multibranch Pipeline Triggers:
 
 Organization Folders automatically discover and create pipelines for every repository in a GitHub/GitLab organization.
 
-```
+```text
 New Item → GitHub Organization
 
 GitHub Organization:
@@ -856,7 +857,7 @@ options {
 
 ### Syntax Errors
 
-```
+```text
 Error: Expected one of "agent" "post" "stages" "environment" ...
 → Check your Declarative structure — all blocks must be in the right place
 → Use Pipeline Syntax Generator in Jenkins UI
@@ -868,7 +869,7 @@ Error: No such DSL method 'xxx'
 
 ### Agent Not Available
 
-```
+```text
 Error: No agents with label 'linux && docker' found
 → Verify agents are online: Manage Jenkins → Nodes
 → Verify labels match: Node → Configure → Labels
@@ -877,7 +878,7 @@ Error: No agents with label 'linux && docker' found
 
 ### Credentials Not Found
 
-```
+```text
 Error: CredentialNotFoundException: No credentials found with id 'my-creds'
 → Verify credential ID: Manage Jenkins → Credentials
 → Verify credential scope: Global vs. Folder

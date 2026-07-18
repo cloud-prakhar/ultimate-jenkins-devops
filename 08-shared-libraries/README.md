@@ -19,32 +19,28 @@ Jenkins Shared Libraries are the cornerstone of enterprise-grade pipeline standa
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                     SHARED LIBRARY REPOSITORY                       │
-│                                                                     │
-│  jenkins-shared-library/                                            │
-│  ├── vars/                   ← Global variables (pipeline steps)    │
-│  │   ├── buildMavenApp.groovy                                       │
-│  │   ├── buildDockerImage.groovy                                    │
-│  │   ├── deployToKubernetes.groovy                                  │
-│  │   └── sendNotification.groovy                                    │
-│  ├── src/                    ← Groovy classes (OO logic)            │
-│  │   └── org/example/
-│  │       ├── DockerUtils.groovy                                     │
-│  │       ├── KubernetesUtils.groovy                                 │
-│  │       └── NotificationUtils.groovy                               │
-│  ├── resources/              ← Static files (shell scripts, configs)│
-│  │   ├── scripts/
-│  │   │   └── deploy.sh
-│  │   └── templates/
-│  │       └── deployment.yaml
-│  └── test/                   ← Unit tests for library               │
-│      └── ...
-└─────────────────────────────────────────────────────────────────────┘
+```text
+jenkins-shared-library/
+├── vars/                   # Global variables (pipeline steps)
+│   ├── buildMavenApp.groovy
+│   ├── buildDockerImage.groovy
+│   ├── deployToKubernetes.groovy
+│   └── sendNotification.groovy
+├── src/                    # Groovy classes (OO logic)
+│   └── org/example/
+│       ├── DockerUtils.groovy
+│       ├── KubernetesUtils.groovy
+│       └── NotificationUtils.groovy
+├── resources/              # Static files (shell scripts, configs)
+│   ├── scripts/
+│   │   └── deploy.sh
+│   └── templates/
+│       └── deployment.yaml
+└── test/                   # Unit tests for the library
+    └── ...
 
-Used in Pipelines across the organization:
-  @Library('jenkins-shared-library@main') _
+# Used in pipelines across the organization:
+#   @Library('jenkins-shared-library@main') _
 ```
 
 ---
@@ -69,7 +65,7 @@ touch build.gradle
 
 Navigate: **Manage Jenkins → System → Global Pipeline Libraries**
 
-```
+```text
 Name: jenkins-shared-library
 Default version: main
 Load implicitly: [ ] (leave unchecked — require explicit @Library)
@@ -159,6 +155,7 @@ def call(Map config = [:]) {
 ```
 
 **Usage:**
+
 ```groovy
 // With defaults
 buildMavenApp()
@@ -249,6 +246,7 @@ def call(Map config = [:]) {
 ```
 
 **Usage:**
+
 ```groovy
 def imageRef = buildDockerImage(
     imageName: 'registry.example.com/my-app',
@@ -327,6 +325,7 @@ def call(Map config = [:]) {
 ```
 
 **Usage:**
+
 ```groovy
 deployToKubernetes(
     appName: 'payment-service',
@@ -401,6 +400,7 @@ Console:  ${env.BUILD_URL}console
 ```
 
 **Usage:**
+
 ```groovy
 post {
     always {
@@ -439,6 +439,7 @@ def call(Map config = [:], Closure body) {
 ```
 
 **Usage:**
+
 ```groovy
 withSonarQualityGate(serverName: 'sonarqube-prod') {
     sh 'mvn sonar:sonar -B'
@@ -513,6 +514,7 @@ class DockerUtils implements Serializable {
 ```
 
 **Usage in pipeline:**
+
 ```groovy
 import org.example.DockerUtils
 
@@ -696,6 +698,7 @@ spec:
 ```
 
 **Using resources in library:**
+
 ```groovy
 def call(Map config) {
     def template = libraryResource('templates/deployment.yaml')
@@ -877,7 +880,7 @@ dependencies {
 
 ## Versioning Strategy
 
-```
+```text
 jenkins-shared-library/
 └── (git repository with semver tags)
 
@@ -890,6 +893,7 @@ Version examples:
 ```
 
 **Pinning versions in pipelines:**
+
 ```groovy
 // RECOMMENDED for production: pin to a specific version
 @Library('jenkins-shared-library@v1.2.3') _

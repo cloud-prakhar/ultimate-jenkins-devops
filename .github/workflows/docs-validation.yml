@@ -5,18 +5,23 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   docs:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-
-      - name: Install Mermaid CLI
-        run: npm install --global @mermaid-js/mermaid-cli
 
       - name: Markdown lint
         uses: DavidAnson/markdownlint-cli2-action@v18
@@ -27,15 +32,32 @@ jobs:
       - name: Spell check
         uses: crate-ci/typos@v1.31.1
 
+      - name: Install Mermaid CLI
+        run: npm install --global @mermaid-js/mermaid-cli@11
+
+      - name: Validate Mermaid diagrams
+        run: |
+          chmod +x scripts/validate-mermaid.sh
+          ./scripts/validate-mermaid.sh
+
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Link checking reaches out to third-party sites, so an outage there
+      # should not block a documentation change. Exclusions for lab-local and
+      # placeholder hosts live in .lycheeignore.
       - name: Link check
         uses: lycheeverse/lychee-action@v2
+        continue-on-error: true
         with:
-          args: --no-progress --accept 200,403,429 --verbose './**/*.md'
+          args: >-
+            --no-progress
+            --accept 200,206,403,429
+            --max-retries 3
+            --timeout 20
+            --exclude-all-private
+            './**/*.md'
           fail: true
-
-      - name: Validate Mermaid syntax
-        run: |
-          find . -name '*.mmd' -print0 | while IFS= read -r -d '' file; do
-            echo "Validating ${file}"
-            mmdc -i "${file}" -o /tmp/$(basename "${file}").svg >/dev/null 2>&1
-          done

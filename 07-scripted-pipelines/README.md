@@ -714,7 +714,7 @@ pipeline {
 
 Jenkins executes pipeline Groovy in a sandbox for security. Some operations require approval:
 
-```
+```text
 [Pipeline] Start of Pipeline
 Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod...
 → Go to: Manage Jenkins → In-process Script Approval
@@ -722,6 +722,7 @@ Scripts not permitted to use method groovy.lang.GroovyObject invokeMethod...
 ```
 
 Common sandbox-restricted operations:
+
 - `System.exit()`
 - Network operations
 - File system operations outside workspace

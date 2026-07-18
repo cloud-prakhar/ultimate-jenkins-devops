@@ -8,20 +8,16 @@ A Jenkins instance you cannot observe is a Jenkins instance you cannot trust. Th
 
 ## Observability Stack
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      JENKINS OBSERVABILITY                       │
-│                                                                  │
-│  Jenkins ──metrics──▶ Prometheus ──queries──▶ Grafana           │
-│     │                                                           │
-│     └──logs──▶ Fluentd/Fluent Bit ──▶ Elasticsearch/Loki       │
-│                                             │                   │
-│                                        Kibana/Grafana           │
-│                                                                  │
-│  Alertmanager ◀──alerts── Prometheus                            │
-│       │                                                         │
-│       └──▶ Slack / PagerDuty / Email                            │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    JENKINS[Jenkins]
+    JENKINS -->|metrics| PROM[Prometheus]
+    PROM -->|queries| GRAF[Grafana]
+    JENKINS -->|logs| FLUENT[Fluentd / Fluent Bit]
+    FLUENT --> STORE[Elasticsearch / Loki]
+    STORE --> VIZ[Kibana / Grafana]
+    PROM -->|alerts| ALERT[Alertmanager]
+    ALERT --> NOTIFY[Slack / PagerDuty / Email]
 ```
 
 ---
@@ -234,7 +230,7 @@ jvm_memory_bytes_used{area="heap"} / jvm_memory_bytes_max{area="heap"} * 100 > 8
 
 ### Key Dashboard Panels
 
-```
+```text
 Row 1: Overview
   - Total Builds Today (counter)
   - Build Success Rate (gauge, %)
@@ -536,7 +532,7 @@ pipeline_stages:
 
 The four DORA (DevOps Research and Assessment) metrics measure software delivery performance.
 
-```
+```text
 DORA Metrics:
 1. Deployment Frequency    — How often do you deploy?
 2. Lead Time for Changes   — Time from commit to production

@@ -12,14 +12,16 @@ Use the dedicated [debugging lab](./debugging-lab/README.md) for hands-on failur
 
 ## Troubleshooting Methodology
 
-```
-1. OBSERVE     → What is the symptom? (error message, behavior)
-2. LOCATE      → Where is it happening? (controller, agent, pipeline stage)
-3. IDENTIFY    → What changed recently? (plugin update, config change, code change)
-4. ISOLATE     → Reproduce in minimal environment
-5. FIX         → Apply targeted fix
-6. VERIFY      → Confirm fix works
-7. DOCUMENT    → Record cause and solution
+```mermaid
+flowchart TD
+    O["1. OBSERVE<br/>What is the symptom? (error message, behavior)"]
+    L["2. LOCATE<br/>Where is it happening? (controller, agent, pipeline stage)"]
+    I["3. IDENTIFY<br/>What changed recently? (plugin update, config, code)"]
+    S["4. ISOLATE<br/>Reproduce in a minimal environment"]
+    F["5. FIX<br/>Apply a targeted fix"]
+    V["6. VERIFY<br/>Confirm the fix works"]
+    D["7. DOCUMENT<br/>Record cause and solution"]
+    O --> L --> I --> S --> F --> V --> D
 ```
 
 ---
@@ -27,6 +29,7 @@ Use the dedicated [debugging lab](./debugging-lab/README.md) for hands-on failur
 ## 1. Jenkins Won't Start
 
 ### Symptom
+
 Jenkins service fails to start or crashes immediately after startup.
 
 ### Diagnosis
@@ -89,6 +92,7 @@ JAVA_OPTS="-Dhudson.Main.development=true -Dpermissive-script-security.enabled=t
 ## 2. Build Not Triggering
 
 ### Symptom
+
 Code pushed to GitHub but Jenkins build doesn't start.
 
 ### Diagnosis
@@ -132,7 +136,7 @@ triggers {
 
 ### Webhook Troubleshooting Checklist
 
-```
+```text
 [ ] Jenkins URL is publicly accessible (not localhost)
 [ ] Firewall allows inbound on port 443 (or 80)
 [ ] GitHub webhook payload URL is correct
@@ -148,6 +152,7 @@ triggers {
 ## 3. Agent Connection Problems
 
 ### Symptom
+
 Agent shows offline, or builds are stuck in queue waiting for agents.
 
 ### SSH Agent
@@ -224,6 +229,7 @@ kubectl auth can-i create pods --as=system:serviceaccount:jenkins:jenkins -n jen
 ## 4. Out of Memory (OOM) Errors
 
 ### Symptom
+
 Jenkins crashes with `java.lang.OutOfMemoryError: Java heap space`
 
 ### Diagnosis
@@ -276,7 +282,7 @@ post { always { cleanWs() } }
 
 ### Syntax Errors
 
-```
+```text
 Error: java.io.IOException: Expected one of "agent" "post" "stages"...
 ```
 
@@ -580,6 +586,7 @@ post {
 ## 9. Plugin Conflicts
 
 ### Symptom
+
 Jenkins behaves unexpectedly after plugin update, or fails to start.
 
 ### Diagnosis
