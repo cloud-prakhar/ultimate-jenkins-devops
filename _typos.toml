@@ -1,0 +1,7 @@
+# Spell-check configuration for the crate-ci/typos CI job.
+# Keep this list tight: only genuine false positives belong here.
+[default.extend-words]
+# "HashiCorp" / "HashiConf" tokenize to "Hashi", flagged as a typo of "Hash".
+Hashi = "Hashi"
+# RTO = Recovery Time Objective (DR terminology), not a typo of "TO".
+RTO = "RTO"

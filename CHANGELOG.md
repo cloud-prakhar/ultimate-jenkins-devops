@@ -4,6 +4,8 @@
 
 ### Added
 
+- `_typos.toml` allowing the `crate-ci/typos` spell-check job's only false
+  positives (`Hashi` from HashiCorp/HashiConf, `RTO` = Recovery Time Objective)
 - `.markdownlint-cli2.jsonc` config so `markdownlint` runs with intentional,
   prose-friendly rules instead of failing on ~800 default-rule violations
 - `.lycheeignore` to exclude lab-local and placeholder hosts from link checks
@@ -26,6 +28,10 @@
 
 ### Fixed
 
+- Silenced hadolint `DL3008` (unpinned apt versions) on the two local-lab
+  Dockerfiles (Jenkins controller and agent) with a documented inline
+  `# hadolint ignore`, so `code-validation` lint passes; the Flask production
+  image stays strict
 - Split `code-validation` into per-concern jobs and set the `GITHUB_TOKEN`
   that `gitleaks-action@v2` requires (the secret scan previously failed)
 - Rebuilt `docs-validation` so markdown lint, spell check, mermaid validation,
