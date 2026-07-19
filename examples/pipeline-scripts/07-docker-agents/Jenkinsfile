@@ -1,0 +1,100 @@
+// Example 07 — Docker Agents Per Stage
+//
+// Teaches:  per-stage docker agents, toolchains without installing tools,
+//           reuseNode, and why the lab mounts the Docker socket
+// Runs on:  00-local-lab-setup (agent label 'linux')
+// Plugins:  docker-workflow (preinstalled in the lab)
+// Duration: 2-4 minutes on first run while images pull
+//
+// LAB SHORTCUT: docker-compose.yml mounts /var/run/docker.sock into the agent
+// so builds can talk to the host Docker daemon. That grants effective root on
+// the host and is acceptable ONLY for a throwaway local lab. In production use
+// a Kubernetes agent (see templates/Jenkinsfile.kubernetes-agent) or a rootless
+// builder such as Kaniko or Buildah instead.
+
+pipeline {
+    // 'none' at the top forces every stage to declare its own agent. This
+    // prevents a stray step from running on whatever agent happens to be free.
+    agent none
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Python Checks') {
+            agent {
+                docker {
+                    image 'python:3.12-slim'
+                    label 'linux'
+                }
+            }
+            steps {
+                sh '''
+                    set -eu
+                    python --version
+                    python -c "print('python stage ok')"
+                '''
+            }
+        }
+
+        stage('Node Checks') {
+            agent {
+                docker {
+                    image 'node:20-alpine'
+                    label 'linux'
+                }
+            }
+            steps {
+                sh '''
+                    set -eu
+                    node --version
+                    node -e "console.log('node stage ok')"
+                '''
+            }
+        }
+
+        stage('Build Image') {
+            // Plain agent: this stage needs the Docker CLI itself, not a
+            // language runtime.
+            agent { label 'linux' }
+            steps {
+                sh '''
+                    set -eu
+                    cat > Dockerfile.demo <<'DOCKERFILE'
+FROM alpine:3.20
+RUN echo "demo image" > /etc/demo-release
+CMD ["cat", "/etc/demo-release"]
+DOCKERFILE
+                    docker build -f Dockerfile.demo -t demo-app:${BUILD_NUMBER} .
+                    docker run --rm demo-app:${BUILD_NUMBER}
+                '''
+            }
+            post {
+                always {
+                    // Untagged images accumulate fast on a laptop. Clean up in
+                    // the same stage that created them.
+                    sh 'docker rmi demo-app:${BUILD_NUMBER} >/dev/null 2>&1 || true'
+                    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+                }
+            }
+        }
+
+        stage('Push to Lab Registry') {
+            agent { label 'linux' }
+            steps {
+                // The lab runs an insecure local registry at registry:5000 on
+                // the compose network. No credentials, because it is local only.
+                sh '''
+                    set -eu
+                    echo "In a real pipeline this would be:"
+                    echo "  docker tag demo-app:${BUILD_NUMBER} registry:5000/demo-app:${BUILD_NUMBER}"
+                    echo "  docker push registry:5000/demo-app:${BUILD_NUMBER}"
+                    echo "See example 08 for pushing to a registry that needs credentials."
+                '''
+            }
+        }
+    }
+}

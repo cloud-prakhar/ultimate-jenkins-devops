@@ -1,0 +1,111 @@
+// Example 06 — Post Conditions and Notifications
+//
+// Teaches:  every post block, stage-level vs pipeline-level post, currentBuild
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: under 1 minute
+//
+// Drive the OUTCOME parameter through success / unstable / failure to see which
+// post blocks fire each time. Notifications are echoed rather than sent — the
+// lab has no Slack or SMTP plugin, and the call shape is what matters.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 10, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        choice(
+            name: 'OUTCOME',
+            choices: ['success', 'unstable', 'failure'],
+            description: 'Force a build result so you can watch post blocks fire'
+        )
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building'
+            }
+            post {
+                // Stage-level post runs as soon as this stage ends, before
+                // later stages start. Pipeline-level post runs once at the end.
+                success { echo '[stage post] Build stage succeeded' }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                script {
+                    if (params.OUTCOME == 'unstable') {
+                        // The supported way to mark a build unstable from code.
+                        unstable(message: 'Simulated flaky test')
+                    } else if (params.OUTCOME == 'failure') {
+                        error('Simulated test failure')
+                    } else {
+                        echo 'All tests passed'
+                    }
+                }
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                echo 'Deploying'
+            }
+        }
+    }
+
+    post {
+        // Runs on every outcome. Put teardown here.
+        always {
+            echo "Result: ${currentBuild.currentResult}, duration: ${currentBuild.durationString}"
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+
+        // Only when the build result is SUCCESS.
+        success {
+            echo "NOTIFY ok: ${env.JOB_NAME} #${env.BUILD_NUMBER} passed — ${env.BUILD_URL}"
+            // Real form with the Slack plugin installed:
+            // slackSend color: 'good', message: "${env.JOB_NAME} #${env.BUILD_NUMBER} passed"
+        }
+
+        // Only when tests failed but the build itself did not error.
+        unstable {
+            echo "NOTIFY warn: ${env.JOB_NAME} #${env.BUILD_NUMBER} is unstable — ${env.BUILD_URL}"
+        }
+
+        // Only when the build errored.
+        failure {
+            echo "NOTIFY alert: ${env.JOB_NAME} #${env.BUILD_NUMBER} FAILED — ${env.BUILD_URL}"
+            // Real form with the Email Extension plugin installed:
+            // emailext subject: "FAILED: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+            //          body: "See ${env.BUILD_URL}",
+            //          to: 'team@example.com'
+        }
+
+        // Fires when this build's result differs from the previous build's —
+        // the block that stops "still broken" spam.
+        changed {
+            echo "NOTIFY state change: now ${currentBuild.currentResult}, was ${currentBuild.previousBuild?.result}"
+        }
+
+        // Fires only on a red -> green transition.
+        fixed {
+            echo "NOTIFY recovered: ${env.JOB_NAME} is green again"
+        }
+
+        // Fires when a build fails and the previous one also failed.
+        regression {
+            echo 'NOTIFY regression: this build is worse than the last one'
+        }
+
+        // Fires when the build was aborted (timeout, or a human cancelled it).
+        aborted {
+            echo 'NOTIFY aborted: build was cancelled or timed out'
+        }
+    }
+}

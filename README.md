@@ -42,6 +42,7 @@ Status legend: `✅ Available` `🚧 In Progress` `📌 Planned` `🧪 Experimen
 | [14-troubleshooting](./14-troubleshooting/README.md) | All levels | 🚧 In Progress | Local lab | 60-120 minutes |
 | [15-real-world-projects/01-python-flask-todo-api](./15-real-world-projects/01-python-flask-todo-api/README.md) | Beginner-Intermediate | ✅ Available | Local lab | 60-90 minutes |
 | [15-real-world-projects](./15-real-world-projects/README.md) | Mixed | 🚧 In Progress | Mixed | Mixed |
+| [examples](./examples/README.md) | Beginner-Intermediate | 🛠 Needs Validation | Local lab | 15 examples, 1-10 minutes each |
 | [instructor-resources](./instructor-resources/README.md) | Instructor | ✅ Available | Documentation | 20-30 minutes |
 | [learner-resources](./learner-resources/README.md) | All levels | ✅ Available | Documentation | Self-paced |
 | [templates/module-template](./templates/module-template/README.md) | Contributor | ✅ Available | Documentation | 20 minutes |
@@ -51,6 +52,7 @@ Status legend: `✅ Available` `🚧 In Progress` `📌 Planned` `🧪 Experimen
 - A local Jenkins learning lab with Jenkins controller, a functional `linux` agent, Gitea, and a local Docker registry
 - A practical Flask Todo API project with beginner and intermediate Jenkinsfiles
 - An AWS EC2 single-instance Jenkins live-demo lab with manual and Terraform paths
+- Fifteen runnable [example pipelines](./examples/README.md) with step-by-step Jenkins UI walkthroughs, covering declarative and scripted syntax plus SCM, multibranch, webhook, and release integration
 - Learner, instructor, troubleshooting, and contribution resources
 - GitHub Actions validation workflows for docs, code, Terraform, and repository smoke tests
 
@@ -110,6 +112,7 @@ Typical duration: 10+ hours. Cloud or Kubernetes cost may apply.
 00-local-lab-setup/              Local Docker lab
 01-14/                           Learning modules by topic
 15-real-world-projects/          End-to-end projects and roadmap
+examples/                        15 runnable demo pipelines with UI walkthroughs
 instructor-resources/            Session plans and recovery checklists
 learner-resources/               Prerequisites, glossary, interview prep
 templates/module-template/       Standard content template for new modules

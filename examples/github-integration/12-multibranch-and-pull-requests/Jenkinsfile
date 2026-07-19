@@ -1,0 +1,126 @@
+// Example 12 — Multibranch and Pull Requests
+//
+// Teaches:  BRANCH_NAME / CHANGE_ID / CHANGE_TARGET, branch-specific stages,
+//           and running a cheaper pipeline on PRs than on main
+// Runs on:  00-local-lab-setup as a MULTIBRANCH PIPELINE job against Gitea.
+//           Branch stages work identically on GitHub. PR stages need a provider
+//           that discovers pull requests — the Gitea plugin (installed) and the
+//           GitHub Branch Source plugin (not installed in the lab) both do.
+// Plugins:  workflow-multibranch, git, gitea (preinstalled in the lab)
+// Duration: 1-2 minutes
+//
+// SETUP: New Item > Multibranch Pipeline > Add source (Gitea or GitHub) >
+//        point it at a repo containing this file as 'Jenkinsfile'.
+//        A plain "Pipeline script" job leaves BRANCH_NAME null and every
+//        conditional stage below is skipped — expected, not a bug.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        // Multibranch creates one job per branch, so retention matters more:
+        // a busy repo can otherwise fill the disk with stale branch builds.
+        buildDiscarder(logRotator(numToKeepStr: '10', daysToKeepStr: '30'))
+        disableConcurrentBuilds()
+    }
+
+    environment {
+        // Set by the multibranch job. CHANGE_ID is non-null only for a PR.
+        IS_PR = "${env.CHANGE_ID != null}"
+    }
+
+    stages {
+        stage('Context') {
+            steps {
+                echo """
+BRANCH_NAME   = ${env.BRANCH_NAME}
+CHANGE_ID     = ${env.CHANGE_ID ?: '(not a pull request)'}
+CHANGE_TARGET = ${env.CHANGE_TARGET ?: '-'}
+CHANGE_BRANCH = ${env.CHANGE_BRANCH ?: '-'}
+CHANGE_AUTHOR = ${env.CHANGE_AUTHOR ?: '-'}
+CHANGE_TITLE  = ${env.CHANGE_TITLE ?: '-'}
+IS_PR         = ${env.IS_PR}
+"""
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Runs for every branch and every pull request'
+            }
+        }
+
+        stage('Fast Tests') {
+            steps {
+                echo 'Cheap checks — always worth running'
+            }
+        }
+
+        // PR builds should be fast. Full suites belong on main, where a slow
+        // pipeline blocks nobody's review.
+        stage('PR Checks') {
+            when { changeRequest() }
+            steps {
+                echo "Validating PR #${env.CHANGE_ID}: ${env.CHANGE_TITLE}"
+                sh '''
+                    set -eu
+                    # Diff only what the PR actually changed.
+                    git fetch --no-tags origin "${CHANGE_TARGET}:refs/remotes/origin/${CHANGE_TARGET}" 2>/dev/null || true
+                    echo "--- files changed vs ${CHANGE_TARGET} ---"
+                    git diff --name-only "origin/${CHANGE_TARGET}...HEAD" 2>/dev/null || echo "(diff unavailable in this job type)"
+                '''
+            }
+        }
+
+        // Narrow a stage to PRs against a specific base branch.
+        stage('PR To Main Only') {
+            when { changeRequest target: 'main' }
+            steps {
+                echo 'Extra scrutiny for PRs targeting main'
+            }
+        }
+
+        stage('Full Test Suite') {
+            // Not on PRs: this is the expensive one.
+            when {
+                allOf {
+                    not { changeRequest() }
+                    anyOf { branch 'main'; branch 'develop' }
+                }
+            }
+            steps {
+                sh 'echo "running full suite"; sleep 5'
+            }
+        }
+
+        stage('Publish Snapshot') {
+            when { branch 'develop' }
+            steps {
+                echo 'Publishing a snapshot build from develop'
+            }
+        }
+
+        stage('Publish Release') {
+            when { branch 'main' }
+            steps {
+                echo 'Publishing a release build from main'
+            }
+        }
+
+        // Pattern matching for branch families.
+        stage('Feature Branch') {
+            when { branch pattern: 'feature/.*', comparator: 'REGEXP' }
+            steps {
+                echo "Feature branch build: ${env.BRANCH_NAME}"
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

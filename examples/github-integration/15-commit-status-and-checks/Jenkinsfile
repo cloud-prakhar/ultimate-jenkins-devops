@@ -1,0 +1,133 @@
+// Example 15 — Commit Status and Checks
+//
+// Teaches:  reporting per-stage pipeline status back to the SCM so a pull
+//           request shows green or red before anyone reviews it
+// Runs on:  00-local-lab-setup — the pipeline RUNS end to end, but the status
+//           calls are the one thing in this folder that cannot fully work in
+//           the lab. See "Honest status" below.
+// Plugins:  git, gitea (preinstalled). The GitHub plugin and Checks API plugins
+//           are NOT installed in this lab.
+// Duration: about 1 minute
+//
+// HONEST STATUS
+//   - Gitea path:  the Gitea plugin posts commit status automatically for
+//     Multibranch builds. Nothing in the Jenkinsfile is required. It works in
+//     the lab out of the box.
+//   - GitHub path: githubNotify() and publishChecks() need plugins that this
+//     lab does not install, and a Jenkins reachable by GitHub. Those calls are
+//     therefore guarded below so the example still runs. Install
+//     'github' and 'github-checks' to make them live.
+//   - The generic path (curl to the REST API) works anywhere you have a token,
+//     and is shown so the mechanism is not hidden behind a plugin.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    environment {
+        STATUS_CONTEXT = 'ci/jenkins/pipeline'
+    }
+
+    stages {
+        stage('Report Pending') {
+            steps {
+                script {
+                    // Guarded so a missing plugin does not fail the build.
+                    // In a repo that has the plugin, drop the guard.
+                    notifyScm('PENDING', 'Build started')
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building'
+                script { notifyScm('PENDING', 'Build stage complete') }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p reports
+                    cat > reports/junit.xml <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="checks-demo" tests="2" failures="0" errors="0" skipped="0" time="0.2">
+  <testcase classname="demo.SmokeTest" name="app_starts" time="0.1"/>
+  <testcase classname="demo.SmokeTest" name="health_endpoint" time="0.1"/>
+</testsuite>
+XML
+                '''
+            }
+            post {
+                always {
+                    junit testResults: 'reports/junit.xml', allowEmptyResults: false
+                }
+            }
+        }
+
+        stage('Show The Real Calls') {
+            steps {
+                echo '''
+With the GitHub plugin installed, per-stage status looks like this:
+
+    githubNotify context: 'ci/jenkins/build',
+                 status:  'SUCCESS',
+                 description: 'Build passed',
+                 credentialsId: 'github-token'
+
+With the GitHub Checks plugin, you get a richer Checks-tab entry:
+
+    publishChecks name: 'Jenkins CI',
+                  title: 'Pipeline',
+                  summary: 'All stages passed',
+                  conclusion: 'SUCCESS',
+                  detailsURL: env.BUILD_URL
+
+With no plugin at all, the raw REST call — works for any provider:
+
+    curl -sS -X POST \\
+      -H "Authorization: Bearer $GH_TOKEN" \\
+      -H "Accept: application/vnd.github+json" \\
+      "https://api.github.com/repos/OWNER/REPO/statuses/$GIT_COMMIT" \\
+      -d "{\\"state\\":\\"success\\",\\"context\\":\\"ci/jenkins\\",\\"target_url\\":\\"$BUILD_URL\\"}"
+
+Wrap the token with withCredentials — see example 08.
+'''
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+        success  { script { notifyScm('SUCCESS', 'All stages passed') } }
+        unstable { script { notifyScm('FAILURE', 'Tests failed') } }
+        failure  { script { notifyScm('FAILURE', 'Build failed') } }
+    }
+}
+
+// Helper kept at the bottom of the file. In a real repository this belongs in a
+// shared library (module 08) so every pipeline reports status the same way.
+void notifyScm(String status, String description) {
+    // steps.getClass() lookups would be cleaner, but this stays readable:
+    // try the plugin call, fall back to a log line if it is unavailable.
+    try {
+        githubNotify(
+            context: env.STATUS_CONTEXT,
+            status: status,
+            description: description,
+            credentialsId: 'github-token'
+        )
+    } catch (NoSuchMethodError | MissingMethodException e) {
+        echo "[scm-status] ${env.STATUS_CONTEXT} -> ${status}: ${description} " +
+             '(githubNotify unavailable; install the GitHub plugin to report for real)'
+    }
+}

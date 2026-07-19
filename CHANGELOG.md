@@ -4,6 +4,16 @@
 
 ### Added
 
+- `examples/` — 15 runnable demonstration pipelines with per-example Jenkins UI
+  walkthroughs. `examples/pipeline-scripts/` covers declarative syntax
+  (multi-stage, parameters, parallel, conditionals, artifacts and test reports,
+  post conditions, Docker agents, credentials, error handling) plus one scripted
+  pipeline; `examples/github-integration/` covers SCM checkout, multibranch and
+  pull requests, webhooks and triggers, tag-based releases, and commit status
+  reporting. Every example targets the `00-local-lab-setup` lab and uses only
+  preinstalled plugins
+- `examples/validate-examples.sh`, which lints each example against a running
+  Jenkins via the declarative linter endpoint
 - `_typos.toml` allowing the `crate-ci/typos` spell-check job's only false
   positives (`Hashi` from HashiCorp/HashiConf, `RTO` = Recovery Time Objective)
 - `.markdownlint-cli2.jsonc` config so `markdownlint` runs with intentional,

@@ -1,0 +1,84 @@
+// Example 10 — Scripted Pipeline, Multi-Stage
+//
+// Teaches:  the scripted equivalent of examples 01-06, and when Groovy control
+//           flow beats declarative syntax
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: about 1 minute
+//
+// Declarative is the right default: it validates before running, renders well
+// in Blue Ocean, and is easier to review. Reach for scripted only when you need
+// real programming — dynamic stage generation, loops over a computed list,
+// early returns. This example does exactly that in the "Dynamic Stages" block.
+//
+// Pairs with module 07-scripted-pipelines.
+
+// Scripted pipelines start with node {} instead of pipeline {}.
+node('linux') {
+    // No options block in scripted — wrap the body instead.
+    timeout(time: 15, unit: 'MINUTES') {
+        timestamps {
+            try {
+                stage('Prepare') {
+                    echo "Build #${env.BUILD_NUMBER} on ${env.NODE_NAME}"
+                    sh 'mkdir -p build reports'
+                }
+
+                stage('Build') {
+                    sh '''
+                        set -eu
+                        echo "artifact ${BUILD_NUMBER}" > build/app.txt
+                    '''
+                }
+
+                // Dynamic stages: the reason to choose scripted. A declarative
+                // pipeline cannot generate its stage list at runtime.
+                stage('Dynamic Stages') {
+                    def modules = ['auth', 'billing', 'search']
+                    def branches = [:]
+
+                    for (m in modules) {
+                        // Capture the loop variable — Groovy closures bind by
+                        // reference, so without this every branch would see the
+                        // last value. A classic scripted-pipeline bug.
+                        def name = m
+                        branches["test-${name}"] = {
+                            echo "testing module ${name}"
+                            sh "sleep 3 && echo '${name} ok'"
+                        }
+                    }
+
+                    parallel branches
+                }
+
+                stage('Conditional Deploy') {
+                    // Plain Groovy where declarative would need a when block.
+                    if (env.BRANCH_NAME == 'main') {
+                        echo 'Deploying from main'
+                    } else {
+                        echo "Skipping deploy on branch: ${env.BRANCH_NAME ?: 'unknown'}"
+                    }
+                }
+
+                stage('Package') {
+                    sh 'tar -czf app-${BUILD_NUMBER}.tar.gz build'
+                    archiveArtifacts artifacts: '*.tar.gz', fingerprint: true
+                }
+
+                currentBuild.result = 'SUCCESS'
+
+            } catch (err) {
+                // Scripted has no post section. try/catch/finally is how you
+                // guarantee cleanup and notification.
+                currentBuild.result = 'FAILURE'
+                echo "Build failed: ${err.getMessage()}"
+                throw err
+
+            } finally {
+                stage('Cleanup') {
+                    echo "Result: ${currentBuild.currentResult}"
+                    cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+                }
+            }
+        }
+    }
+}

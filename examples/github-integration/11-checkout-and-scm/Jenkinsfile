@@ -1,0 +1,126 @@
+// Example 11 — Checkout and SCM
+//
+// Teaches:  checkout scm vs the git step vs a full checkout([$class: 'GitSCM']),
+//           SCM credentials, shallow clones, and reading commit metadata
+// Runs on:  00-local-lab-setup — the lab's Gitea server speaks the same git
+//           protocol as GitHub, so every step here works against both. Point
+//           GIT_URL at a GitHub repo and nothing else changes.
+// Plugins:  git, credentials-binding (preinstalled in the lab)
+// Duration: under 1 minute
+//
+// SETUP: for a private repo add a credential first —
+//   Manage Jenkins > Credentials > Add > "Username with password"
+//   ID: git-scm-creds  (username + a GitHub personal access token, or the
+//   Gitea admin user + password from your .env)
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        // We do our own checkout below, so suppress the implicit one.
+        skipDefaultCheckout()
+    }
+
+    parameters {
+        string(
+            name: 'GIT_URL',
+            defaultValue: 'http://gitea:3000/gitea-admin/demo-app.git',
+            description: 'Repository to clone. Swap for an https://github.com/... URL to run against GitHub.'
+        )
+        string(
+            name: 'GIT_BRANCH',
+            defaultValue: 'main',
+            description: 'Branch to build'
+        )
+    }
+
+    environment {
+        GIT_CREDENTIALS_ID = 'git-scm-creds'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // The explicit form. Verbose, but it is the only one that
+                // exposes extensions — shallow clones, submodules, timeouts,
+                // clean-before-checkout — which is what you need on a real repo.
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: "*/${params.GIT_BRANCH}"]],
+                    extensions: [
+                        // Discard local modifications so a poisoned workspace
+                        // cannot affect the next build.
+                        [$class: 'CleanBeforeCheckout'],
+                        // Depth 1 is much faster on large histories. Omit it if
+                        // the build needs tags or `git describe`.
+                        [$class: 'CloneOption', shallow: true, depth: 1, noTags: false, timeout: 10]
+                    ],
+                    userRemoteConfigs: [[
+                        url: params.GIT_URL,
+                        credentialsId: env.GIT_CREDENTIALS_ID
+                    ]]
+                ])
+            }
+        }
+
+        stage('Read Commit Metadata') {
+            steps {
+                // The git plugin sets these after a checkout. Prefer shelling
+                // out for anything it does not provide — the values are always
+                // accurate, and no plugin API changes under you.
+                sh '''
+                    set -eu
+                    echo "commit:  $(git rev-parse HEAD)"
+                    echo "short:   $(git rev-parse --short HEAD)"
+                    echo "branch:  $(git rev-parse --abbrev-ref HEAD)"
+                    echo "author:  $(git log -1 --pretty=format:'%an <%ae>')"
+                    echo "subject: $(git log -1 --pretty=format:'%s')"
+                '''
+                script {
+                    // Capture a value for later stages.
+                    env.GIT_SHORT_SHA = sh(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+                    echo "Image tag would be: app:${env.BUILD_NUMBER}-${env.GIT_SHORT_SHA}"
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Building ${params.GIT_URL} @ ${env.GIT_SHORT_SHA}"
+            }
+        }
+
+        stage('Other Checkout Forms') {
+            steps {
+                echo '''
+Three ways to check out, in order of preference:
+
+1. checkout scm
+   Only valid in a Multibranch Pipeline or "Pipeline script from SCM" job.
+   Jenkins already knows the repo, branch and credentials — reuse them rather
+   than hardcoding a URL. This is the correct choice in almost every real job.
+
+2. checkout([$class: 'GitSCM', ...])
+   Used above. Needed when you clone a SECOND repository, or when you need
+   extensions the shorthand does not expose.
+
+3. git url: '...', branch: 'main', credentialsId: '...'
+   A shorthand for form 2. Fine for demos; no access to extensions, so no
+   shallow clone and no clean-before-checkout.
+'''
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

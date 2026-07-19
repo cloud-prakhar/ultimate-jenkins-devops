@@ -1,0 +1,125 @@
+// Example 04 — Conditional Stages
+//
+// Teaches:  when {} with branch, expression, environment, anyOf/allOf/not
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: under 1 minute
+//
+// Branch conditions need a job that knows its branch — a Multibranch Pipeline
+// or a pipeline-from-SCM job. In a plain "Pipeline script" job env.BRANCH_NAME
+// is null and those stages are skipped. That is expected, not a bug.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 10, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'production'],
+            description: 'Target environment'
+        )
+        booleanParam(
+            name: 'RUN_SLOW_TESTS',
+            defaultValue: false,
+            description: 'Include the slow test suite'
+        )
+    }
+
+    environment {
+        DEPLOYABLE = 'true'
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                echo "Building for ${params.ENVIRONMENT}"
+            }
+        }
+
+        stage('Fast Tests') {
+            steps {
+                echo 'Always runs'
+            }
+        }
+
+        stage('Slow Tests') {
+            when {
+                expression { return params.RUN_SLOW_TESTS }
+            }
+            steps {
+                sh 'echo "slow suite"; sleep 5'
+            }
+        }
+
+        stage('Deploy Dev') {
+            when {
+                // allOf = every condition must hold.
+                allOf {
+                    expression { return params.ENVIRONMENT == 'dev' }
+                    environment name: 'DEPLOYABLE', value: 'true'
+                }
+            }
+            steps {
+                echo 'Deploying to dev'
+            }
+        }
+
+        stage('Deploy Staging or Prod') {
+            when {
+                // anyOf = at least one condition must hold.
+                anyOf {
+                    expression { return params.ENVIRONMENT == 'staging' }
+                    expression { return params.ENVIRONMENT == 'production' }
+                }
+            }
+            steps {
+                echo "Deploying to ${params.ENVIRONMENT}"
+            }
+        }
+
+        stage('Main Branch Only') {
+            when {
+                // Skipped in a plain Pipeline job — see the header note.
+                branch 'main'
+            }
+            steps {
+                echo 'This build is on main'
+            }
+        }
+
+        stage('Non-Production Cleanup') {
+            when {
+                not { expression { return params.ENVIRONMENT == 'production' } }
+            }
+            steps {
+                echo 'Tearing down ephemeral resources'
+            }
+        }
+
+        stage('Production Gate') {
+            when {
+                expression { return params.ENVIRONMENT == 'production' }
+                // beforeAgent avoids allocating an agent for a stage that will
+                // be skipped. On heavier agents this saves real time.
+                beforeAgent true
+            }
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    input message: 'Promote to production?', ok: 'Promote'
+                }
+                echo 'Promoted'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

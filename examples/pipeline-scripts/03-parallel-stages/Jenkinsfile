@@ -1,0 +1,91 @@
+// Example 03 — Parallel Stages
+//
+// Teaches:  running independent checks concurrently, failFast, executor limits
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: about 1 minute
+//
+// The lab agent has JENKINS_AGENT_EXECUTORS=2 by default. Three parallel
+// branches will therefore queue: two run, one waits. That is the lesson —
+// parallelism is bounded by executors, not by the Jenkinsfile.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p build
+                    echo "built" > build/app.txt
+                '''
+                // Parallel branches may land on a different workspace, so hand
+                // work between stages through the stash, not the filesystem.
+                stash name: 'app', includes: 'build/**'
+            }
+        }
+
+        stage('Verify') {
+            // failFast aborts the remaining branches as soon as one fails.
+            // Good for fast feedback, bad when you want the full report.
+            failFast true
+            parallel {
+                stage('Lint') {
+                    steps {
+                        unstash 'app'
+                        sh '''
+                            set -eu
+                            echo "linting..."
+                            sleep 5
+                            echo "no lint errors"
+                        '''
+                    }
+                }
+
+                stage('Unit Tests') {
+                    steps {
+                        unstash 'app'
+                        sh '''
+                            set -eu
+                            echo "running unit tests..."
+                            sleep 8
+                            echo "12 passed"
+                        '''
+                    }
+                }
+
+                stage('Integration Tests') {
+                    steps {
+                        unstash 'app'
+                        sh '''
+                            set -eu
+                            echo "running integration tests..."
+                            sleep 10
+                            echo "4 passed"
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Package') {
+            steps {
+                unstash 'app'
+                sh 'tar -czf app-${BUILD_NUMBER}.tar.gz build'
+                archiveArtifacts artifacts: '*.tar.gz', fingerprint: true
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

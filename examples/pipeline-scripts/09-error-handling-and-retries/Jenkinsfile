@@ -1,0 +1,108 @@
+// Example 09 — Error Handling and Retries
+//
+// Teaches:  retry, timeout, catchError, warnError, try/catch, and choosing a
+//           build result on purpose instead of by accident
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: 1-2 minutes
+//
+// Retry is for genuinely transient failures — a flaky network, a registry
+// hiccup. Retrying a deterministic failure just wastes three times the compute
+// and hides the bug.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        // Pipeline-level ceiling. Stage-level timeouts below are tighter.
+        timeout(time: 20, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+        // Retry the WHOLE pipeline if the agent disconnects mid-build.
+        // Does not retry ordinary step failures.
+        retry(2)
+    }
+
+    stages {
+        stage('Retry A Flaky Step') {
+            steps {
+                // Fails twice, succeeds on the third attempt.
+                retry(3) {
+                    sh '''
+                        set -eu
+                        ATTEMPT_FILE="${WORKSPACE}/.attempt"
+                        COUNT=$(cat "$ATTEMPT_FILE" 2>/dev/null || echo 0)
+                        COUNT=$((COUNT + 1))
+                        echo "$COUNT" > "$ATTEMPT_FILE"
+                        echo "attempt ${COUNT}"
+                        if [ "$COUNT" -lt 3 ]; then
+                            echo "simulated transient failure"
+                            exit 1
+                        fi
+                        echo "succeeded on attempt ${COUNT}"
+                    '''
+                }
+            }
+        }
+
+        stage('Timeout A Slow Step') {
+            steps {
+                // The step is aborted after 20s. catchError converts that abort
+                // into UNSTABLE so the rest of the pipeline still runs.
+                catchError(buildResult: 'UNSTABLE', stageResult: 'FAILURE') {
+                    timeout(time: 20, unit: 'SECONDS') {
+                        sh 'echo "starting slow work"; sleep 60; echo "never reached"'
+                    }
+                }
+            }
+        }
+
+        stage('Continue On Non-Critical Failure') {
+            steps {
+                // warnError = catchError(buildResult: 'UNSTABLE', stageResult: 'UNSTABLE')
+                // Right for optional work: a linter, a metrics push, a changelog.
+                warnError('Optional lint step failed; continuing') {
+                    sh 'exit 3'
+                }
+                echo 'Pipeline continues'
+            }
+        }
+
+        stage('Handle And Inspect An Error') {
+            steps {
+                script {
+                    try {
+                        sh 'exit 42'
+                    } catch (err) {
+                        // Log the cause, then decide the result deliberately.
+                        echo "Caught: ${err.getMessage()}"
+                        currentBuild.result = 'UNSTABLE'
+                    } finally {
+                        echo 'finally always runs — use it for cleanup'
+                    }
+                }
+            }
+        }
+
+        stage('Fail Fast On A Real Problem') {
+            steps {
+                script {
+                    // Contrast with the blocks above: an unmet precondition
+                    // should stop the build, not be swallowed.
+                    def artifactExists = fileExists('nonexistent-artifact.tar.gz')
+                    if (!artifactExists) {
+                        echo 'Missing a required artifact would normally be fatal:'
+                        echo "  error('Required artifact not found')"
+                        echo 'Demonstrated rather than thrown so this example completes.'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Final result: ${currentBuild.currentResult}"
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

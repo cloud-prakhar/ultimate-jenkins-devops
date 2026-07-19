@@ -1,0 +1,119 @@
+// Example 13 — Webhooks and Triggers
+//
+// Teaches:  every way a build starts, why webhooks beat polling, and how to
+//           tell which trigger fired
+// Runs on:  00-local-lab-setup. Gitea and Jenkins share a compose network, so
+//           Gitea can reach Jenkins directly. A real GitHub webhook needs
+//           Jenkins to be reachable from the public internet.
+// Plugins:  git, gitea (preinstalled in the lab)
+// Duration: under 1 minute
+//
+// WEBHOOK SETUP (lab, Gitea):
+//   Gitea repo > Settings > Webhooks > Add Webhook > Gitea
+//   Target URL: http://jenkins:8080/gitea-webhook/post
+//   Trigger:    Push events
+//
+// WEBHOOK SETUP (real GitHub):
+//   GitHub repo > Settings > Webhooks > Add webhook
+//   Payload URL:  https://your-jenkins.example.com/github-webhook/
+//   Content type: application/json
+//   Secret:       set one, and configure the same value in Jenkins
+//   Requires the GitHub plugin, which is NOT installed in this lab.
+//
+// Prefer webhooks. Polling every minute across 200 jobs means 288,000 git
+// operations a day to discover a handful of commits.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    triggers {
+        // Polling fallback for when a webhook cannot reach Jenkins — a private
+        // network, or a firewall you do not control. Five minutes is a
+        // reasonable floor; every minute is usually waste.
+        pollSCM('H/5 * * * *')
+
+        // Nightly build. 'H' spreads load: Jenkins hashes the job name to pick
+        // a minute, so 200 jobs written as 'H 2 * * *' do not all fire at 02:00.
+        cron('H 2 * * *')
+
+        // Build after another job finishes.
+        // upstream(upstreamProjects: 'shared-library-build', threshold: hudson.model.Result.SUCCESS)
+
+        // GitHub push trigger — needs the GitHub plugin, not installed here.
+        // githubPush()
+    }
+
+    stages {
+        stage('Identify Trigger') {
+            steps {
+                script {
+                    // currentBuild.getBuildCauses() reports why this build ran.
+                    // Useful for skipping expensive stages on timer builds.
+                    def causes = currentBuild.getBuildCauses()
+                    echo "Build causes: ${causes*.shortDescription.join(', ')}"
+
+                    def isTimer = causes.any { it._class?.contains('TimerTrigger') }
+                    def isScm   = causes.any { it._class?.contains('SCMTrigger') }
+                    def isUser  = causes.any { it._class?.contains('UserIdCause') }
+
+                    env.TRIGGER_KIND = isTimer ? 'timer' : isScm ? 'scm' : isUser ? 'manual' : 'other'
+                    echo "Trigger kind: ${env.TRIGGER_KIND}"
+                }
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building'
+            }
+        }
+
+        stage('Changed Files') {
+            steps {
+                script {
+                    // What actually changed since the last build. Drives
+                    // path-based decisions: skip the frontend job when only
+                    // docs moved.
+                    def changed = []
+                    for (changeSet in currentBuild.changeSets) {
+                        for (entry in changeSet.items) {
+                            echo "${entry.commitId.take(7)} by ${entry.author}: ${entry.msg}"
+                            changed.addAll(entry.affectedPaths)
+                        }
+                    }
+                    if (changed.isEmpty()) {
+                        echo 'No recorded changes (first build, or a manual trigger).'
+                    } else {
+                        echo "Changed paths: ${changed.unique().join(', ')}"
+                    }
+                }
+            }
+        }
+
+        stage('Nightly Only Work') {
+            when { expression { return env.TRIGGER_KIND == 'timer' } }
+            steps {
+                echo 'Dependency audit, cache warm, long soak tests'
+            }
+        }
+
+        stage('Push Only Work') {
+            when { expression { return env.TRIGGER_KIND == 'scm' } }
+            steps {
+                echo 'Fast feedback for the commit that triggered this build'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

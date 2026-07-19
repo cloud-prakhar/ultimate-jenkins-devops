@@ -1,0 +1,114 @@
+// Example 08 — Credentials and Secrets
+//
+// Teaches:  withCredentials, the credentials() helper, masking, and the ways
+//           people accidentally leak secrets into build logs
+// Runs on:  00-local-lab-setup (agent label 'linux')
+// Plugins:  credentials-binding (preinstalled in the lab)
+// Duration: under 1 minute
+//
+// SETUP REQUIRED — create these three credentials first
+//   Manage Jenkins > Credentials > System > Global credentials > Add:
+//     1. Kind "Secret text",          ID: demo-api-token,    Secret: any value
+//     2. Kind "Username with password", ID: demo-registry-creds
+//     3. Kind "Secret file",          ID: demo-kubeconfig,   upload any small file
+// Without them the build fails at the first withCredentials block, which is
+// itself a useful thing to see once.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 10, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    environment {
+        // The credentials() helper on a username/password credential creates
+        // THREE variables: REGISTRY, REGISTRY_USR and REGISTRY_PSW.
+        REGISTRY = credentials('demo-registry-creds')
+    }
+
+    stages {
+        stage('Secret Text') {
+            steps {
+                withCredentials([string(credentialsId: 'demo-api-token', variable: 'API_TOKEN')]) {
+                    // Jenkins masks the VALUE anywhere it appears in the log,
+                    // so this prints **** rather than the token.
+                    sh 'echo "token is: $API_TOKEN"'
+
+                    // Use single quotes so the shell expands the variable.
+                    // Double quotes would make GROOVY interpolate it, baking the
+                    // literal secret into the shell command — where masking is
+                    // far less reliable and it can surface in process listings.
+                    sh 'curl -sS -o /dev/null -w "%{http_code}\\n" -H "Authorization: Bearer $API_TOKEN" http://jenkins:8080/login || true'
+                }
+            }
+        }
+
+        stage('Username and Password') {
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'demo-registry-creds',
+                    usernameVariable: 'REG_USER',
+                    passwordVariable: 'REG_PASS'
+                )]) {
+                    // --password-stdin keeps the password off the command line.
+                    sh '''
+                        set -eu
+                        echo "logging in as ${REG_USER}"
+                        echo "$REG_PASS" | docker login registry:5000 -u "$REG_USER" --password-stdin || \
+                            echo "login skipped (lab registry is unauthenticated)"
+                    '''
+                }
+            }
+        }
+
+        stage('Secret File') {
+            steps {
+                withCredentials([file(credentialsId: 'demo-kubeconfig', variable: 'KUBECONFIG_FILE')]) {
+                    // The file is written to a temp path and deleted when the
+                    // block exits. Never copy it into the workspace — the
+                    // workspace outlives the block and may be archived.
+                    sh '''
+                        set -eu
+                        echo "kubeconfig staged at a temporary path"
+                        wc -c < "$KUBECONFIG_FILE"
+                    '''
+                }
+            }
+        }
+
+        stage('Environment Helper') {
+            steps {
+                // From the environment block above.
+                sh 'echo "registry user: $REGISTRY_USR"'
+                sh 'echo "registry pass: $REGISTRY_PSW"'
+            }
+        }
+
+        stage('Leak Patterns To Avoid') {
+            steps {
+                withCredentials([string(credentialsId: 'demo-api-token', variable: 'API_TOKEN')]) {
+                    sh '''
+                        set -eu
+                        echo "Masking only rewrites exact matches in the log."
+                        echo "These defeat it and leak the secret:"
+                        echo "  - echo \\$API_TOKEN | base64        (encodes past the filter)"
+                        echo "  - echo \\$API_TOKEN | rev           (reverses past the filter)"
+                        echo "  - writing the token into an archived artifact"
+                        echo "  - set -x with the token on the command line"
+                        echo "Never do these. Masking is a safety net, not a boundary."
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker logout registry:5000 >/dev/null 2>&1 || true'
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

@@ -1,0 +1,101 @@
+// Example 02 — Parameters and Environment
+//
+// Teaches:  build parameters, global vs stage environment, params vs env
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: under 1 minute
+//
+// Note: parameters only appear in the UI after the FIRST build. Run the job
+// once, then "Build with Parameters" shows up. This surprises everyone once.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 10, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    parameters {
+        string(
+            name: 'APP_NAME',
+            defaultValue: 'demo-service',
+            description: 'Logical application name used in artifact names'
+        )
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'production'],
+            description: 'Target environment; first choice is the default'
+        )
+        booleanParam(
+            name: 'VERBOSE',
+            defaultValue: false,
+            description: 'Print extra diagnostics'
+        )
+    }
+
+    environment {
+        // Available to every stage. Groovy interpolation happens once, when
+        // the pipeline starts.
+        BUILD_LABEL = "${params.APP_NAME}-${params.ENVIRONMENT}-${env.BUILD_NUMBER}"
+        ARTIFACT_DIR = 'dist'
+    }
+
+    stages {
+        stage('Show Inputs') {
+            steps {
+                // params.X is the typed parameter. env.X is the string
+                // environment variable. Jenkins exposes parameters as both.
+                echo "APP_NAME    = ${params.APP_NAME}"
+                echo "ENVIRONMENT = ${params.ENVIRONMENT}"
+                echo "VERBOSE     = ${params.VERBOSE} (type: ${params.VERBOSE.getClass().simpleName})"
+                echo "BUILD_LABEL = ${env.BUILD_LABEL}"
+            }
+        }
+
+        stage('Stage-Scoped Environment') {
+            environment {
+                // Only visible inside this stage.
+                STAGE_NOTE = 'set for this stage only'
+            }
+            steps {
+                sh 'echo "STAGE_NOTE inside stage: ${STAGE_NOTE}"'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p "${ARTIFACT_DIR}"
+                    echo "${BUILD_LABEL}" > "${ARTIFACT_DIR}/build-label.txt"
+                '''
+            }
+        }
+
+        stage('Diagnostics') {
+            // Boolean parameters read naturally in a when block.
+            when { expression { return params.VERBOSE } }
+            steps {
+                sh '''
+                    set -eu
+                    echo "--- workspace ---"; ls -la
+                    echo "--- git ---"; git --version
+                    echo "--- docker ---"; docker --version
+                '''
+            }
+        }
+
+        stage('Publish') {
+            steps {
+                archiveArtifacts artifacts: "${env.ARTIFACT_DIR}/build-label.txt", fingerprint: true
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+    }
+}

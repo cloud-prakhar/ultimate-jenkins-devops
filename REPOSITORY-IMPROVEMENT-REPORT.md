@@ -101,6 +101,12 @@ Observed results:
 - No live AWS infrastructure was deployed from Terraform
 - No end-to-end Jenkins job was executed through the Jenkins UI during this session
 - Many legacy module READMEs remain documentation-first and were not fully migrated to the new template
+- The 15 pipelines in `examples/` were reviewed against the lab's installed plugin set and agent
+  toolchain, and their Markdown passes `markdownlint` and relative-link checks, but they have **not**
+  been executed on a live Jenkins. The console transcripts in each README's "Expected Output" section
+  are written from the pipeline definitions rather than captured from real builds, so exact wording
+  may differ by Jenkins and plugin version. Running `examples/validate-examples.sh` against a live
+  controller is the first step toward closing this gap; executing each job is the second
 
 ## Remaining Roadmap Items
 
@@ -113,7 +119,10 @@ Observed results:
 
 ### Medium Priority
 
-- add guided labs for shared libraries and multibranch pipelines
+- add guided labs for shared libraries (multibranch and pull requests are now covered by
+  `examples/github-integration/12-multibranch-and-pull-requests`)
+- execute every pipeline in `examples/` on a live lab and replace the written "Expected Output"
+  transcripts with captured console output
 - add more troubleshooting scenarios with sample logs
 - add repository-wide Markdown lint and Mermaid render validation baselines
 - tighten local lab plugin pinning and review transitive plugin advisories

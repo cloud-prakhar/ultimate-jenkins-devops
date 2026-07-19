@@ -1,0 +1,109 @@
+// Example 05 — Artifacts and Test Reports
+//
+// Teaches:  archiveArtifacts, junit, publishHTML, stash/unstash
+// Runs on:  00-local-lab-setup (agent label 'linux')
+// Plugins:  junit, htmlpublisher, ws-cleanup (all preinstalled in the lab)
+// Duration: about 1 minute
+//
+// The test report here is hand-written JUnit XML so the example needs no
+// language toolchain. Real pipelines get this file from pytest, surefire,
+// jest --reporters=jest-junit, and so on.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 15, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '5'))
+    }
+
+    stages {
+        stage('Build') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p dist
+                    echo "build ${BUILD_NUMBER}" > dist/app.txt
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p reports
+
+                    # Stand-in for a real test runner writing JUnit XML.
+                    # One failure is included deliberately so the build finishes
+                    # UNSTABLE and you can see how Jenkins renders it.
+                    cat > reports/junit.xml <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="demo" tests="3" failures="1" errors="0" skipped="0" time="0.42">
+  <testcase classname="demo.MathTest" name="adds_numbers" time="0.10"/>
+  <testcase classname="demo.MathTest" name="subtracts_numbers" time="0.12"/>
+  <testcase classname="demo.MathTest" name="divides_numbers" time="0.20">
+    <failure message="expected 2 but was 3">demo.MathTest.divides_numbers failed</failure>
+  </testcase>
+</testsuite>
+XML
+                '''
+            }
+            post {
+                always {
+                    // A failing test marks the build UNSTABLE (yellow), not
+                    // FAILED (red). allowEmptyResults:false makes a missing
+                    // report fail loudly instead of passing silently.
+                    junit testResults: 'reports/junit.xml', allowEmptyResults: false
+                }
+            }
+        }
+
+        stage('Coverage Report') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p reports/coverage
+                    cat > reports/coverage/index.html <<'HTML'
+<!doctype html>
+<title>Coverage</title>
+<h1>Coverage report</h1>
+<p>Line coverage: 87%</p>
+HTML
+                '''
+                // htmlpublisher plugin. Jenkins' Content-Security-Policy blocks
+                // inline CSS/JS in published HTML by default, so complex reports
+                // may render unstyled until the CSP is relaxed. See the README.
+                publishHTML(target: [
+                    reportDir            : 'reports/coverage',
+                    reportFiles          : 'index.html',
+                    reportName           : 'Coverage Report',
+                    keepAll              : true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing         : false
+                ])
+            }
+        }
+
+        stage('Archive') {
+            steps {
+                sh 'tar -czf app-${BUILD_NUMBER}.tar.gz dist'
+                // fingerprint tracks this artifact across jobs, which is how
+                // you answer "which build produced the binary in production?"
+                archiveArtifacts artifacts: '*.tar.gz, reports/junit.xml',
+                                 fingerprint: true,
+                                 onlyIfSuccessful: false
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+        unstable {
+            echo 'Build is UNSTABLE — see the Test Result trend on the job page.'
+        }
+    }
+}

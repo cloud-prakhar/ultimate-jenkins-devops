@@ -1,0 +1,72 @@
+// Example 01 — Hello Multi-Stage
+//
+// Teaches:  the minimum shape of a declarative pipeline with more than one stage
+// Runs on:  00-local-lab-setup (agent label 'linux'), no extra plugins
+// Duration: under 1 minute
+//
+// Every later example builds on this skeleton: agent, options, stages, post.
+
+pipeline {
+    // Never build on the controller. The local lab ships one agent labelled
+    // 'linux docker'; asking for 'linux' pins the build to it.
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        ansiColor('xterm')
+        // Always bound a build. A hung shell step otherwise occupies an
+        // executor forever.
+        timeout(time: 10, unit: 'MINUTES')
+        // Keep the lab's disk small.
+        buildDiscarder(logRotator(numToKeepStr: '10'))
+    }
+
+    stages {
+        stage('Prepare') {
+            steps {
+                echo "Build #${env.BUILD_NUMBER} of ${env.JOB_NAME}"
+                sh 'mkdir -p build && echo "prepared at $(date -u +%FT%TZ)" > build/prepare.log'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                // Stands in for a real compile step. The lab agent has bash,
+                // curl, jq, git and docker — nothing language-specific.
+                sh '''
+                    set -eu
+                    echo "compiling..."
+                    printf 'artifact-%s\\n' "${BUILD_NUMBER}" > build/app.txt
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh '''
+                    set -eu
+                    test -s build/app.txt
+                    echo "1 test passed"
+                '''
+            }
+        }
+
+        stage('Package') {
+            steps {
+                sh 'tar -czf build/app-${BUILD_NUMBER}.tar.gz -C build app.txt'
+                archiveArtifacts artifacts: 'build/*.tar.gz', fingerprint: true
+            }
+        }
+    }
+
+    post {
+        always {
+            // ws-cleanup plugin. Without this the agent workspace grows on
+            // every build.
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+        success {
+            echo "Archived app-${env.BUILD_NUMBER}.tar.gz"
+        }
+    }
+}

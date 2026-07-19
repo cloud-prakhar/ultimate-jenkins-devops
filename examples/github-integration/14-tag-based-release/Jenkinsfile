@@ -1,0 +1,169 @@
+// Example 14 — Tag-Based Release
+//
+// Teaches:  building from git tags, deriving a version from the tag, refusing
+//           to release from an untagged commit
+// Runs on:  00-local-lab-setup as a Multibranch Pipeline with tag discovery
+//           enabled. Works identically against Gitea and GitHub.
+// Plugins:  git, gitea (preinstalled in the lab)
+// Duration: 1-2 minutes
+//
+// SETUP: in the Multibranch job's source configuration add the behaviour
+//        "Discover tags". Without it TAG_NAME is never set and the release
+//        stages stay skipped.
+//
+// Tag the commit, do not tag the build. BUILD_NUMBER increments even when
+// nothing changed; a tag names a specific tree that you can reproduce later.
+
+pipeline {
+    agent { label 'linux' }
+
+    options {
+        timestamps()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+        skipDefaultCheckout()
+    }
+
+    parameters {
+        booleanParam(
+            name: 'DRY_RUN',
+            defaultValue: true,
+            description: 'Print release actions instead of performing them'
+        )
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                // noTags: false matters here — a shallow clone that drops tags
+                // makes `git describe` useless.
+                checkout([
+                    $class: 'GitSCM',
+                    branches: scm.branches,
+                    extensions: [
+                        [$class: 'CleanBeforeCheckout'],
+                        [$class: 'CloneOption', shallow: false, noTags: false, timeout: 10]
+                    ],
+                    userRemoteConfigs: scm.userRemoteConfigs
+                ])
+            }
+        }
+
+        stage('Resolve Version') {
+            steps {
+                script {
+                    // TAG_NAME is set by multibranch when the build is for a tag.
+                    // Fall back to git describe for ordinary branch builds.
+                    env.RELEASE_TAG = env.TAG_NAME ?: sh(
+                        script: 'git describe --tags --exact-match 2>/dev/null || true',
+                        returnStdout: true
+                    ).trim()
+
+                    env.IS_RELEASE = (env.RELEASE_TAG ? 'true' : 'false')
+
+                    if (env.IS_RELEASE == 'true') {
+                        // Strip a leading 'v' so v1.4.2 becomes 1.4.2.
+                        env.VERSION = env.RELEASE_TAG.replaceFirst(/^v/, '')
+                        echo "Release build: tag=${env.RELEASE_TAG} version=${env.VERSION}"
+                    } else {
+                        def sha = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
+                        env.VERSION = "0.0.0-dev.${env.BUILD_NUMBER}+${sha}"
+                        echo "Snapshot build: version=${env.VERSION}"
+                    }
+                }
+            }
+        }
+
+        stage('Validate Tag Format') {
+            when { expression { return env.IS_RELEASE == 'true' } }
+            steps {
+                // Reject a malformed tag before anything is published. Cleaning
+                // up a bad release tag afterwards is far more painful.
+                sh '''
+                    set -eu
+                    if ! echo "${RELEASE_TAG}" | grep -Eq '^v?[0-9]+\\.[0-9]+\\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+                        echo "Tag '${RELEASE_TAG}' is not semver (expected v1.2.3 or 1.2.3-rc.1)"
+                        exit 1
+                    fi
+                    echo "Tag format OK: ${RELEASE_TAG}"
+                '''
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh '''
+                    set -eu
+                    mkdir -p dist
+                    echo "${VERSION}" > dist/VERSION
+                    echo "app built at $(date -u +%FT%TZ)" >> dist/VERSION
+                '''
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Testing ${env.VERSION}"
+            }
+        }
+
+        stage('Generate Changelog') {
+            when { expression { return env.IS_RELEASE == 'true' } }
+            steps {
+                sh '''
+                    set -eu
+                    PREV=$(git describe --tags --abbrev=0 "${RELEASE_TAG}^" 2>/dev/null || true)
+                    {
+                        echo "# ${RELEASE_TAG}"
+                        echo
+                        if [ -n "$PREV" ]; then
+                            echo "Changes since ${PREV}:"
+                            git log --no-merges --pretty=format:'- %s (%an)' "${PREV}..${RELEASE_TAG}"
+                        else
+                            echo "Initial release."
+                        fi
+                    } > dist/CHANGELOG.md
+                    cat dist/CHANGELOG.md
+                '''
+            }
+        }
+
+        stage('Publish Release') {
+            when { expression { return env.IS_RELEASE == 'true' } }
+            steps {
+                script {
+                    if (params.DRY_RUN) {
+                        echo """DRY RUN — would publish:
+  docker tag  app:build registry:5000/app:${env.VERSION}
+  docker push registry:5000/app:${env.VERSION}
+  docker push registry:5000/app:latest
+  gh release create ${env.RELEASE_TAG} --notes-file dist/CHANGELOG.md
+"""
+                    } else {
+                        // Real publish steps go here, wrapped in withCredentials.
+                        // See example 08 for the credential patterns.
+                        echo 'Publishing (implement for your registry)'
+                    }
+                }
+                archiveArtifacts artifacts: 'dist/**', fingerprint: true
+            }
+        }
+
+        stage('Snapshot Only') {
+            when { expression { return env.IS_RELEASE != 'true' } }
+            steps {
+                echo "Not a tagged commit — publishing snapshot ${env.VERSION} instead of a release"
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs(deleteDirs: true, disableDeferredWipeout: true)
+        }
+        success {
+            echo "Completed ${env.IS_RELEASE == 'true' ? 'release' : 'snapshot'} ${env.VERSION}"
+        }
+    }
+}
