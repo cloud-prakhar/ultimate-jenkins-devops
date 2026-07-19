@@ -1,6 +1,12 @@
 # AI Instruction & Memory Files (local-only, never commit)
 MEMORY.md
 memory.md
+CLAUDE.md
+CODEX.md
+AGENTS.md
+.claude/
+.codex/
+.agents/
 
 # OS Files
 .DS_Store
