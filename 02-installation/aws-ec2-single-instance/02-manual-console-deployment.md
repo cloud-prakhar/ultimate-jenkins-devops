@@ -182,7 +182,7 @@ Click **Launch instance**. After a minute or two:
 
 ---
 
-## Part B — Install Jenkins (only if you skipped Step 9)
+## Part B — Install and verify Jenkins
 
 Open a shell **through SSM** (no SSH, no open ports):
 
@@ -190,17 +190,36 @@ Open a shell **through SSM** (no SSH, no open ports):
 aws ssm start-session --target <INSTANCE_ID>
 ```
 
-Then, on the instance:
+Then check whether the user data in Step 9 did its job:
+
+```bash
+sudo systemctl status jenkins --no-pager
+```
+
+Expected: Jenkins is `active (running)`.
+
+> **If you get `Unit jenkins.service could not be found`,** the user data
+> script did not finish — the package was never installed. This is common
+> enough that it has its own walkthrough:
+> [04-installing-jenkins.md](./04-installing-jenkins.md) Step 2 shows how to
+> read `/var/log/cloud-init-output.log`, identify which of the three usual
+> causes you hit, and re-run the installer by hand.
+
+If you skipped Step 9 entirely, run the installer now:
 
 ```bash
 sudo bash /opt/ultimate-jenkins/install-jenkins.sh
-sudo systemctl status jenkins --no-pager
+```
+
+Then verify:
+
+```bash
 java -version
 curl -I http://localhost:8080/login
 ```
 
-Expected: Jenkins is `active (running)` and `curl` returns HTTP `200` or
-`403` (both mean "Jenkins is up").
+Expected: Java 21, and `curl` returns HTTP `200` or `403` (both mean "Jenkins
+is up" — `403` is normal here).
 
 > `<INSTANCE_ID>` looks like `i-0abc123def4567890`. Copy it from the EC2
 > console or from `aws ec2 describe-instances`.

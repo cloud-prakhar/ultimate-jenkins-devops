@@ -39,6 +39,35 @@
   the pipeline on third-party outages
 - Added least-privilege `permissions` and `concurrency` blocks to every
   workflow
+- EC2 bootstrap scripts (`terraform/user-data.sh` and
+  `cloud-init/install-jenkins.sh`) aborted on first boot when Ubuntu's
+  `unattended-upgrades` timer held the dpkg lock, leaving instances with no
+  `jenkins.service` at all. Both now wait for `cloud-init`, use
+  `DPkg::Lock::Timeout`, retry transient failures, and log to
+  `/var/log/jenkins-bootstrap.log`
+- Set `user_data_replace_on_change = true` on the Jenkins instance, so editing
+  the bootstrap script and re-applying actually re-runs it, and required
+  IMDSv2 via `metadata_options`
+- **Expired Jenkins signing key.** Every install path used
+  `jenkins.io-2023.key`, which expired on 2026-03-26 — `apt-get update` failed
+  with `NO_PUBKEY 7198F4B714ABFC68` and Jenkins could not be installed at all.
+  `scripts/install-jenkins-ubuntu.sh`, `terraform/user-data.sh`,
+  `cloud-init/install-jenkins.sh` and `02-installation/README.md` now use a
+  key that is current, and the scripts auto-detect the year's key and reject
+  expired ones so the next rotation does not break them. Verified on EC2.
+- **Boot deadlock in the EC2 bootstrap.** The dpkg-lock fix used
+  `cloud-init status --wait`, but as user data the script is a *child* of
+  cloud-init — so it waited on a process waiting on itself and hung the boot
+  forever with nothing installed. Replaced with a bounded wait on the dpkg
+  lock plus stopping the apt timers.
+- **Bootstrap was not safely re-runnable.** A failed run left a broken
+  `jenkins.list` behind, which then broke the *first* `apt-get update` of
+  every later run — so retrying failed for a new and more confusing reason.
+  All install scripts now clear the stale Jenkins repo and keyring first.
+- Rewrote `04-installing-jenkins.md` from a 4-command stub into an end-to-end
+  post-launch guide: SSM shell, bootstrap verification, a diagnosis table for
+  `Unit jenkins.service could not be found`, manual recovery, port forwarding,
+  and unlocking the wizard; `02`, `03`, and `11` now link into it
 
 ## 0.2.0 - 2026-07-17
 

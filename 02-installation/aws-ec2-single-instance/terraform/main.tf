@@ -154,6 +154,15 @@ resource "aws_instance" "jenkins" {
   associate_public_ip_address = true
   user_data                   = file("${path.module}/user-data.sh")
 
+  # User data only runs on first boot. Without this, editing user-data.sh and
+  # re-applying updates the attribute but leaves the running instance untouched.
+  user_data_replace_on_change = true
+
+  metadata_options {
+    http_tokens   = "required" # IMDSv2 only
+    http_endpoint = "enabled"
+  }
+
   root_block_device {
     volume_size           = var.root_volume_size
     volume_type           = "gp3"

@@ -20,6 +20,12 @@ error()   { echo -e "${RED}[ERROR]${NC} $*" >&2; exit 1; }
 # ─── Prerequisites ────────────────────────────────────────────────────────────
 [ "$(id -u)" -eq 0 ] || error "This script must be run as root. Use: sudo $0"
 
+# ─── Clear stale state ────────────────────────────────────────────────────────
+# A previous failed run can leave a Jenkins apt entry whose key is missing or
+# expired, which breaks every later apt-get update -- including the one below,
+# before the key-fixing code further down ever runs. Start clean.
+rm -f /etc/apt/sources.list.d/jenkins.list /usr/share/keyrings/jenkins-keyring.asc
+
 # ─── System Update ────────────────────────────────────────────────────────────
 info "Updating system packages..."
 apt-get update -q
@@ -32,13 +38,33 @@ java -version 2>&1 | grep -o 'version "[^"]*"' | head -1
 
 # ─── Add Jenkins Repository ───────────────────────────────────────────────────
 info "Adding Jenkins repository..."
-apt-get install -y -q ca-certificates curl
+apt-get install -y -q ca-certificates curl gnupg
 
-curl -fsSL https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key | \
-    tee /usr/share/keyrings/jenkins-keyring.asc > /dev/null
+# Jenkins rotates its signing key and the old one EXPIRES. The widely-copied
+# "jenkins.io-2023.key" expired on 2026-03-26; using it makes apt fail with
+# NO_PUBKEY / "repository is not signed". Try this year's key, then next
+# year's, then the last known-good one, and take the first that is not expired.
+KEY_DEST=/usr/share/keyrings/jenkins-keyring.asc
+YEAR=$(date +%Y)
+KEY_FOUND=""
 
-echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc] \
-    https://pkg.jenkins.io/debian-stable binary/" | \
+for KEY_NAME in "jenkins.io-${YEAR}.key" "jenkins.io-$((YEAR + 1)).key" "jenkins.io-2026.key"; do
+    if ! curl -fsSL --retry 3 --retry-delay 5 \
+        "https://pkg.jenkins.io/debian-stable/${KEY_NAME}" -o "${KEY_DEST}" 2>/dev/null; then
+        continue
+    fi
+    # Column 2 of gpg's colon output is validity; "e" means expired.
+    VALIDITY=$(gpg --show-keys --with-colons "${KEY_DEST}" 2>/dev/null | awk -F: '/^pub/{print $2; exit}')
+    if [ -n "${VALIDITY}" ] && [ "${VALIDITY}" != "e" ]; then
+        info "Using signing key: ${KEY_NAME}"
+        KEY_FOUND="${KEY_NAME}"
+        break
+    fi
+done
+
+[ -n "${KEY_FOUND}" ] || error "No valid Jenkins signing key found. Check the current key name at https://www.jenkins.io/doc/book/installing/linux/"
+
+echo "deb [signed-by=${KEY_DEST}] https://pkg.jenkins.io/debian-stable binary/" | \
     tee /etc/apt/sources.list.d/jenkins.list > /dev/null
 
 # ─── Install Jenkins ──────────────────────────────────────────────────────────

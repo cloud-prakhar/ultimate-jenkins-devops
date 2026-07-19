@@ -67,10 +67,17 @@ java -version
 
 ### Install Jenkins
 
+> **Key rotation:** Jenkins publishes a new signing key every few years and the
+> old one expires — `jenkins.io-2023.key`, still quoted by many guides online,
+> expired on **2026-03-26**. If `apt update` reports `NO_PUBKEY` or "repository
+> is not signed", you are using an expired key; fetch the current
+> `jenkins.io-<year>.key` instead. The scripts in this repo detect this
+> automatically.
+
 ```bash
-# Add Jenkins GPG key
+# Add Jenkins GPG key (verified current as of 2026-07-19)
 sudo wget -O /usr/share/keyrings/jenkins-keyring.asc \
-  https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+  https://pkg.jenkins.io/debian-stable/jenkins.io-2026.key
 
 # Add Jenkins repository
 echo "deb [signed-by=/usr/share/keyrings/jenkins-keyring.asc]" \
@@ -117,8 +124,8 @@ sudo dnf install -y java-21-openjdk-devel
 sudo wget -O /etc/yum.repos.d/jenkins.repo \
     https://pkg.jenkins.io/redhat-stable/jenkins.repo
 
-# Import GPG key
-sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
+# Import GPG key (see the key-rotation note above; 2023 key expired 2026-03-26)
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io-2026.key
 
 # Install
 sudo dnf install -y jenkins
